@@ -11,14 +11,13 @@
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
-<main>
-<div class="card"><h1>错题库</h1>
-<p><button type="button" class="secondary" id="dedupBtn">一键清理重复题</button> <span class="small" id="dedupInfo"></span></p>
+<main class="bank-main">
+<div class="bank-top"><h1>错题库</h1><button type="button" class="bank-clean" id="dedupBtn" title="清理重复题">清理重复</button></div>
+<p class="small bank-dedup-info" id="dedupInfo"></p>
 <div id="pills" class="pills-scroll"></div>
 <div id="list"></div>
-<p><button class="secondary" onclick="window.print()">导出打印（浏览器打印）</button>
-<a class="btn ghost" href="practice.html">去练习</a></p>
-<p class="small">数据在云端，换设备登录同一个账号也能看到。删除后统计也会同步更新。</p></div>
+<p class="bank-tools"><button class="bank-tool" onclick="window.print()">导出打印</button>
+<a class="btn bank-tool" href="practice.html">去练习</a></p>
 </main><footer>云端版 · 数据存在 Supabase</footer>
 <div class="zyb-backdrop" id="kpBackdrop"></div><section class="kp-sheet" id="kpSheet"><div class="zyb-grab"></div><button type="button" class="zyb-close" id="kpClose">×</button><div class="kp-sheet-body" id="kpBody"></div></section>
 <script>
@@ -69,15 +68,22 @@ async function render(){
     const d = document.createElement("div");
     d.className = "qitem" + (q.mastered ? " mastered" : "");
     const cstDate = q.created_at ? new Date(new Date(q.created_at).getTime() + 8*60*60*1000).toISOString().slice(0,10) : "";
-    const preview = q.stem.length > 60 ? q.stem.slice(0,60) + "…" : q.stem;
+    const ansLetters = String(q.answer || "").toUpperCase().replace(/[^A-D]/g, "").split("");
+    const optsHtml = (q.options && q.options.length) ? q.options.map(o => {
+      const letter = o.trim().charAt(0).toUpperCase();
+      const isAns = ansLetters.includes(letter);
+      return "<div class='bank-opt " + (isAns ? "correct" : "") + "'><span>" + PWQ.escapeHtml(o) + "</span>" + (isAns ? "<span class='bank-check'>✓ 正确</span>" : "") + "</div>";
+    }).join("") : "";
+    const ansText = q.answer ? PWQ.escapeHtml(q.answer) + (function(){ const cs = q.options ? q.options.filter(o => ansLetters.includes(o.trim().charAt(0).toUpperCase())).map(o => o.replace(/^[A-D][\.、．：:]\s*/, "")) : []; return cs.length ? "，" + PWQ.escapeHtml(cs.join("、")) : ""; })() : "答案暂缺";
     d.innerHTML =
-      "<p><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span>" +
+      "<p class='bank-tags'><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span>" +
       (q.qkind ? "<span class='tag'>" + PWQ.escapeHtml(q.qkind) + "</span>" : "") +
       "<span class='tag'>" + PWQ.escapeHtml(q.type || "") + "</span>" +
       (cstDate ? "<span class='tag'>" + cstDate + "</span>" : "") + "</p>" +
-      "<p><b>" + PWQ.escapeHtml(preview) + "</b></p>" +
-      "<p class='bank-answer'>答案：" + (q.answer ? PWQ.escapeHtml(q.answer) + (function(){ const cs = q.options ? q.options.filter(o => q.answer.includes(o.trim().charAt(0))).map(o => o.replace(/^[A-D][\.、．：:]\s*/, "")) : []; return cs.length ? "，" + PWQ.escapeHtml(cs.join("、")) : ""; })() : "答案暂缺") + "</p>" +
-      "<p><button type='button' class='viewBtn'>查看解析</button> <button type='button' class='secondary editBtn'>改解析</button> <button type='button' class='ghost delBtn'>删除</button></p>";
+      "<p class='bank-stem'><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
+      optsHtml +
+      "<p class='bank-answer'>答案：" + ansText + "</p>" +
+      "<p class='bank-actions'><button type='button' class='viewBtn'>查看解析</button> <button type='button' class='secondary editBtn'>改解析</button> <button type='button' class='ghost delBtn'>删除</button></p>";
     d.querySelector(".viewBtn").onclick = () => openAnalysis(q);
     d.querySelector(".editBtn").onclick = async () => {
       const ne = prompt("改解析（改过的会标手动改过、不锁定，还能再改）：", q.explain);

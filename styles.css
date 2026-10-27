@@ -205,3 +205,25 @@ footer{padding:12px}
 .bank-answer span{font-weight:400}
 /* 拍照页：去掉多余固定高度占位 */
 main.zyb-full{padding-bottom:80px}
+
+/* ===== 错题库第二轮紧凑化（2026-10-27）：顶部同行、外层去卡片、卡片 10-12px ===== */
+.bank-main{padding:8px 12px 80px}
+.bank-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 8px}
+.bank-top h1{margin:0;font-size:21px;line-height:1.4;white-space:nowrap}
+.bank-clean{flex:0 0 auto;padding:6px 10px;font-size:12px;font-weight:700;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;white-space:nowrap}
+.bank-dedup-info{margin:0 0 4px;line-height:1.4}
+.bank-main .pills-scroll{padding:0 0 4px;margin:0 0 4px}
+.bank-main .bank-pill{height:34px;padding:0 12px;margin:0 8px 0 0;font-size:13px;line-height:34px;display:inline-flex;align-items:center}
+.bank-main .qitem{padding:10px 12px;margin:8px 0;border-radius:14px}
+.bank-tags{margin:0 0 4px;line-height:1.4}
+.bank-tags .tag{height:26px;padding:0 8px;margin:0 6px 0 0;font-size:12px;line-height:26px;display:inline-flex;align-items:center}
+.bank-stem{font-size:15px;line-height:1.45;margin:4px 0}
+.bank-opt{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:6px 10px;margin:4px 0;font-size:14px;line-height:1.45;border:1px solid var(--line);border-radius:10px;background:#fff}
+.bank-opt.correct{background:#e8f5e9;border-color:#2e7d32;color:#1b5e20}
+.bank-check{flex:0 0 auto;font-size:12px;font-weight:700;color:#2e7d32;white-space:nowrap}
+.bank-answer{font-size:13px;line-height:1.45;margin:6px 0;font-weight:700}
+.bank-actions{margin:6px 0 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bank-actions button,.bank-actions .btn{height:32px;padding:0 12px;margin:0;font-size:13px;line-height:32px;display:inline-flex;align-items:center}
+.bank-actions .editBtn,.bank-actions .delBtn{height:32px;padding:0 10px;font-size:12px}
+.bank-tools{margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap}
+.bank-tool{height:32px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center}
