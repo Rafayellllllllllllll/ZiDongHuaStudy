@@ -6,7 +6,6 @@
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>错题库</h1>
-<p class="small">点进去首先是全部，从上到下按时间从近到远排，不分科目，全部都能在全部那一栏看到。想看某个学科，就点最上方的小胶囊。</p>
 <p><button type="button" class="secondary" id="dedupBtn">一键清理重复题</button> <span class="small" id="dedupInfo"></span></p>
 <div id="pills" class="pills-scroll"></div>
 <div id="list"></div>
@@ -70,6 +69,7 @@ async function render(){
       "<span class='tag'>" + PWQ.escapeHtml(q.type || "") + "</span>" +
       (cstDate ? "<span class='tag'>" + cstDate + "</span>" : "") + "</p>" +
       "<p><b>" + PWQ.escapeHtml(preview) + "</b></p>" +
+      "<p class='bank-answer'>答案：" + (q.answer ? PWQ.escapeHtml(q.answer) + (function(){ const cs = q.options ? q.options.filter(o => q.answer.includes(o.trim().charAt(0))).map(o => o.replace(/^[A-D][\.、．：:]\s*/, "")) : []; return cs.length ? "，" + PWQ.escapeHtml(cs.join("、")) : ""; })() : "答案暂缺") + "</p>" +
       "<p><button type='button' class='viewBtn'>查看解析</button> <button type='button' class='secondary editBtn'>改解析</button> <button type='button' class='ghost delBtn'>删除</button></p>";
     d.querySelector(".viewBtn").onclick = () => openAnalysis(q);
     d.querySelector(".editBtn").onclick = async () => {
