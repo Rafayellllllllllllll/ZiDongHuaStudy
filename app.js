@@ -44,6 +44,16 @@ function toast(msg){
 function escapeHtml(s){
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
+function cleanLatex(s){
+  if (s == null) return "";
+  let out = String(s);
+  const map = {"\\cap":"∩","\\cup":"∪","\\varnothing":"∅","\\emptyset":"∅","\\in":"∈","\\notin":"∉","\\subset":"⊂","\\subseteq":"⊆","\\supset":"⊃","\\supseteq":"⊇","\\leq":"≤","\\geq":"≥","\\neq":"≠","\\approx":"≈","\\times":"×","\\div":"÷","\\pm":"±","\\infty":"∞","\\alpha":"α","\\beta":"β","\\gamma":"γ","\\delta":"δ","\\pi":"π","\\theta":"θ","\\{":"{","\\}":"}","\\(":"","\\)":""};
+  for (const k of Object.keys(map)) out = out.split(k).join(map[k]);
+  out = out.replace(/\$/g, "");
+  out = out.replace(/\\/g, "");
+  out = out.replace(/\s*([∩∪∈∉⊂⊆⊃⊇≤≥≠≈×÷])\s*/g, "$1");
+  return out.trim();
+}
 function authEmail(username){
   const safe = String(username).trim().toLowerCase().replace(/[^a-z0-9._-]/g, "_");
   return safe + "@cuotiben.app";
@@ -235,7 +245,7 @@ function store(key, fallback){
 function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 
 window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin,
-  toast, escapeHtml, getQuestions, saveQuestions, explainPlaceholder,
+  toast, escapeHtml, cleanLatex, getQuestions, saveQuestions, explainPlaceholder,
   ready, signInOrUp, signOut, signOutAll, addQuestion, updateQuestion, deleteQuestion,
   getNotes, addNote, updateNote, deleteNote, loadProfile };
 document.addEventListener("DOMContentLoaded", banner);

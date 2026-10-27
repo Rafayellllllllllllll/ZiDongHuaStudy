@@ -248,7 +248,7 @@ document.getElementById("recognize").onclick = async () => {
         body: JSON.stringify({ image: cropDataUrl }),
       });
       const data = await res.json();
-      stem = data.stem || ""; options = data.options || []; suggested = data.suggested_answer || ""; subject = data.subject || "其他"; qkind = data.qkind || "选择题"; explain_type = data.explain_type || "定性辨析类";
+      stem = PWQ.cleanLatex(data.stem || ""); options = (data.options || []).map(o => PWQ.cleanLatex(o)); suggested = data.suggested_answer || ""; subject = data.subject || "其他"; qkind = data.qkind || "选择题"; explain_type = data.explain_type || "定性辨析类";
     } catch(e) { stem = ""; options = []; suggested = ""; subject = "其他"; }
     return { stem, options, answer: suggested, subject, qkind, type: explain_type };
   }));
