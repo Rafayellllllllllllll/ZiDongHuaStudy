@@ -70,9 +70,17 @@ return qs;
 function getQuestions(){ return seedQuestions();}
 function saveQuestions(qs){ save("pwq_questions", qs);}
 
-// 解析占位：按已对齐的两类风格返回模板，不是真实 DeepSeek 调用。
-// TODO(接通后端后)：改为 fetch(EXPLAIN_FUNCTION_URL)，密钥放 Supabase Secret。
+// 解析：优先走 Supabase Edge Function（DeepSeek 密钥放后端 Secret），
+// 函数未部署或调用失败时自动回落到模板，不报错。
 async function explainPlaceholder(q){
+try {
+const url = cfg.EXPLAIN_FUNCTION_URL;
+if (url && window.supabaseClient) {
+const res = await window.supabaseClient.functions.invoke("explain", { body: { stem: q.stem, options: q.options, correct_answer: q.answer, explain_type: q.type } });
+if (res && res.data && res.data.explain) return res.data.explain;
+if (res && res.error) throw new Error(String(res.error.message || res.error));
+}
+} catch (e) { /* 回落到模板 */ }
 if (q.type === "定量计算类") {
 return "真实解析以后由 DeepSeek 生成。这里按对齐风格写：直接讲计算过程和步骤。";
 }

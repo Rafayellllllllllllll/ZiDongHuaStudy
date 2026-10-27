@@ -12,8 +12,7 @@ window.APP_CONFIG = {
   SUPABASE_ANON_KEY: "sb_publishable_SxvsuKlHWL3merlBLxJz_w_5aGpsNzE",
   // 事先标定的管理员账号
   ADMIN_ACCOUNT: "Rafayellllllllllllll",
-  // DeepSeek 调用占位：前端不直接调 DeepSeek。
-  // 以后应走 Supabase Edge Function 代理，例如：
-  // EXPLAIN_FUNCTION_URL: "https://xxxx.supabase.co/functions/v1/explain"
-  EXPLAIN_FUNCTION_URL: "",
+  // DeepSeek 调用：前端不直接调 DeepSeek，走 Supabase Edge Function 代理。
+  // 函数部署好之前，前端会自动回落到模板解析，不会报错。
+  EXPLAIN_FUNCTION_URL: "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/explain",
 };
