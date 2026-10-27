@@ -5,10 +5,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
-<div class="card"><h1>第一次使用，先注册登录</h1>
+<div class="card hidden" id="myCard"><div class="my-profile"><div class="my-avatar" id="myAvatar">我</div><div class="my-name" id="myName"></div><div class="my-email" id="myEmail"></div><p><button type="button" id="myLogoutBtn">退出登录</button></p><p><button type="button" class="secondary" id="myLogoutAllBtn">退出所有设备</button></p><p class="small">退出后才会重新出现登录界面。</p></div></div>
+<div class="card" id="loginCard"><h1>第一次使用，先注册登录</h1>
 <p>每个人用自己的账号登录，各人数据独立，互相看不到。分享给朋友时，把网站链接发给朋友，朋友自己注册自己的账号。</p>
 <p class="small">一个设备上登录一次后保持登录，之后再打开不用再填；只有主动退出或清浏览器数据，才需要重新填。数据存在云端，换设备登录同一个账号，错题和笔记本都在。</p>
-<p id="who" class="small"></p><div id="profileBox" class="hidden"><p><b>我的账号</b></p><p id="profileText" class="small"></p><p><button type="button" class="secondary" id="profileLogoutBtn">退出登录</button> <button type="button" class="secondary" id="profileLogoutAllBtn">退出所有设备</button></p><p class="small">退出后才会重新出现登录界面。</p></div>
+<p id="who" class="small"></p>
 <form id="f">
 <label>账号（用户名）</label><input id="username" required placeholder="例如：你的账号名">
 <label>密码</label><input id="password" type="password" required placeholder="不要在聊天里发密码，密码只在这里填">
@@ -28,14 +29,22 @@
   await PWQ.ready();
   const u = PWQ.currentUser();
   const params = new URLSearchParams(location.search);
-  if (u && params.get("account") !== "1") { location.href = "home.html"; return; }
+  const isMy = params.get("account") === "1";
+  if (u && !isMy) { location.href = "home.html"; return; }
+  if (u && isMy) {
+    // 我的页面：从上往下依次是头像、名字、邮箱、退出登录，登录表单和注册说明全部藏起来
+    document.getElementById("loginCard").classList.add("hidden");
+    const myCard = document.getElementById("myCard");
+    myCard.classList.remove("hidden");
+    document.getElementById("myAvatar").textContent = (u.username || "我").slice(0,1);
+    document.getElementById("myName").textContent = u.username + (u.role === "admin" ? "（管理员）" : "");
+    document.getElementById("myEmail").textContent = u.email || "邮箱：未填";
+    document.getElementById("who").textContent = "";
+    return;
+  }
   if (u) {
     document.getElementById("who").textContent = "当前已登录：" + u.username + (u.role === "admin" ? "（管理员）" : "");
     document.getElementById("username").value = u.username;
-    document.getElementById("f").classList.add("hidden");
-    const pb = document.getElementById("profileBox");
-    pb.classList.remove("hidden");
-    document.getElementById("profileText").textContent = "头像：" + (u.username || "").slice(0,1) + " · 名字：" + u.username + " · 邮箱：" + (u.email || "未填");
   } else {
     document.getElementById("who").textContent = "当前未登录，请填账号和密码。";
   }
@@ -53,13 +62,13 @@ document.getElementById("f").addEventListener("submit", async e => {
     PWQ.toast(String(err.message || err));
   }
 });
+document.getElementById("myLogoutBtn").onclick = async () => { await PWQ.signOut(); location.reload(); };
+document.getElementById("myLogoutAllBtn").onclick = async () => { if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return; await PWQ.signOutAll(); location.reload(); };
 document.getElementById("logoutBtn").onclick = async () => {
   await PWQ.signOut();
   PWQ.toast("已退出本机登录。");
   location.reload();
 };
-document.getElementById("profileLogoutBtn").onclick = async () => { await PWQ.signOut(); location.reload(); };
-document.getElementById("profileLogoutAllBtn").onclick = async () => { if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return; await PWQ.signOutAll(); location.reload(); };
 document.getElementById("logoutAllBtn").onclick = async () => {
   if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return;
   await PWQ.signOutAll();

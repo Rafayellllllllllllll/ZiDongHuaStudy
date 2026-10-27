@@ -136,3 +136,20 @@ main.zyb-full p button{margin-left:16px}
 .stat-col{height:140px;display:flex;align-items:flex-end;justify-content:center}
 .stat-fill{width:28px;background:var(--primary);border-radius:8px 8px 0 0}
 .stat-label{font-size:12px;color:var(--muted);margin-top:6px;word-break:break-all}
+
+/* 错题库：顶部学科小胶囊，卡片右上角小星星，选项解析小眼睛 */
+.bank-pill{display:inline-block;border-radius:999px;padding:8px 16px;margin:4px;font-size:14px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+.bank-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.qitem{position:relative}
+.star-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;font-size:16px;line-height:1;background:transparent;border:none;color:#c9c0a8;cursor:pointer;padding:0;margin:0;z-index:2}
+.star-btn.on{color:#e8a100}
+.opt-explain{font-size:14px;line-height:1.6;margin:2px 0 10px 0}
+.opt-explain .opt-q{color:#16233a}
+.opt-explain .opt-a{color:#d92d20}
+.eye-btn{background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px;margin:0}
+
+/* 我的页面：从上往下依次是头像、名字、邮箱、退出登录 */
+.my-profile{text-align:center;padding:24px 16px}
+.my-avatar{width:84px;height:84px;border-radius:50%;background:var(--tag-bg);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;margin:0 auto 12px}
+.my-name{font-size:20px;font-weight:800;margin:8px 0}
+.my-email{font-size:15px;color:var(--muted);margin:8px 0 20px;word-break:break-all}

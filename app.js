@@ -180,7 +180,12 @@ async function signOutAll(){
 }
 async function addQuestion(q){
   if (!_profile) throw new Error("请先登录。");
-  // 防重复：同一题干 + 同一答案，10 秒内只存一次，手抖多点也不会存多条。
+  // 防重复：同一题干（去掉空格、标点差异后相同）只存一次，手抖多点、隔天重录都不会存多条。
+  const norm = (s) => String(s || "").replace(/\s+/g, "").replace(/[，。、；：？！,.!?;:\\(\)\[\]{}]/g, "");
+  const stemNorm = norm(q.stem);
+  if (stemNorm && _questionsCache && _questionsCache.some(x => norm(x.stem) === stemNorm)) {
+    throw new Error("这道题已经在错题库里了，不会重复存。");
+  }
   const key = String(q.stem || "").trim() + "|" + String(q.answer || "").trim();
   const now = Date.now();
   if (!window._lastSaved) window._lastSaved = {};
