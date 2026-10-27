@@ -119,3 +119,11 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 .zyb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:55;opacity:0;pointer-events:none;transition:opacity .3s}
 .zyb-backdrop.show{opacity:1;pointer-events:auto}
 @media (min-width:721px){.zyb-sheet{left:50%;transform:translateX(-50%) translateY(105%);width:720px}.zyb-sheet.open{transform:translateX(-50%) translateY(0)}.zyb-sheet.peek{transform:translateX(-50%) translateY(52vh)}}
+
+/* 上传页全屏照片：去掉页面留白和白卡片边框，照片铺满屏幕宽度，像相机取景一样 */
+main.zyb-full{max-width:none;padding:0 0 96px;margin:0}
+main.zyb-full .zyb-stage-wrap{border:none;border-radius:0;background:#000}
+main.zyb-full .zyb-stage{width:100%}
+main.zyb-full .zyb-stage img{width:100%;height:auto;display:block}
+main.zyb-full .zyb-hint, main.zyb-full p:not(.zyb-hint){padding-left:16px;padding-right:16px}
+main.zyb-full p button{margin-left:16px}

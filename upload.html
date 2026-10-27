@@ -15,18 +15,12 @@
 </div>
 </div>
 <canvas id="camCanvas" class="hidden"></canvas>
-<main class="zyb-page">
-<div class="card"><h1>录错题</h1>
-<p>照片只用来提取文字，不存照片。拍完或传完后，照片只在本页预览，保存的只有提取出来的文字。</p>
-<p><button type="button" class="secondary" id="retakeBtn">重拍 / 回到全屏相机</button>
-<button type="button" class="secondary" id="oldCameraBtn">打不开相机？用系统相机拍照</button><input type="file" accept="image/*" capture="environment" id="camera" class="hidden"></p>
-<label>试卷 / 日期分组（选填）</label><input id="batch" placeholder="例如：2026-10-27 试卷A">
-<label><input type="checkbox" id="single" style="width:auto"> 这张照片里只有一道题（勾选后不用额外指定，直接按这一道处理）</label>
-</div>
+<main class="zyb-page zyb-full">
+<input type="file" accept="image/*" capture="environment" id="camera" class="hidden">
 <div class="zyb-stage-wrap"><div class="zyb-stage" id="stage"><p style="padding:20px;line-height:1.6">还没选照片。拍完或从相册选完后，照片会在这里按原宽高比满宽显示，不裁剪、不拉伸。</p></div></div>
 <p class="zyb-hint" id="ocrNote">点框是选 / 取消选；按住框身拖动可以移动框；按住框右下角圆点可以调宽和高。框不准先别急着保存，先调好框。</p>
 <p><button type="button" class="secondary" id="addBox">手动补框：在照片上拖一下，框出没框住的题</button>
-<button type="button" class="secondary" id="selectAll">全选已框的题</button>
+<button type="button" class="secondary" id="retakeBtn2">重新拍摄</button>
 <button type="button" id="recognize">识别所选题目</button></p>
 <p class="zyb-hint">这是真实识别：点“识别”会把每个选中框裁出来发给能看图的 DeepSeek 模型读题干、选项和正确答案，照片只临时发给模型看一次，不存云端。下面解析面板里的题目、答案、步骤如果还没识别出来，会先显示“正在识别…”，不会用假题目冒充真实识别。</p>
 <div style="height:96px"></div>
@@ -189,7 +183,7 @@ async function showImage(file){
     starts.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
     const img = document.getElementById("photo");
     const H = img.naturalHeight || 1000;
-    if (starts.length >= 1 && !document.getElementById("single").checked) {
+    if (starts.length >= 1) {
       for (let i = 0; i < starts.length; i++) {
         const s = starts[i];
         const next = starts[i+1];
@@ -199,10 +193,6 @@ async function showImage(file){
       }
       renderBoxes();
       document.getElementById("ocrNote").textContent = "智能框选出 " + boxes.length + " 道题，框不准就拖右下角圆点调宽和高，或拖框身移动。";
-    } else if (document.getElementById("single").checked) {
-      boxes = [{ x: 2, y: 2, w: 96, h: 96, selected: false, selOrder: 0, label: "这道题" }];
-      renderBoxes();
-      document.getElementById("ocrNote").textContent = "只有一道题：已整张框选，点框确认即可。";
     } else {
       document.getElementById("ocrNote").textContent = "这次没认出题号（数学符号、横拍、手写遮题号都容易认不出），请直接在照片上拖一下手动框选，框好再点框选错题。";
     }
@@ -222,8 +212,6 @@ document.getElementById("switchCam").onclick = async () => {
   facing = facing === "environment" ? "user" : "environment";
   await startCamera();
 };
-document.getElementById("retakeBtn").onclick = async () => { await startCamera(); };
-document.getElementById("oldCameraBtn").onclick = () => document.getElementById("camera").click();
 document.getElementById("camera").addEventListener("change", e => showImage(e.target.files[0]));
 document.getElementById("file").addEventListener("change", e => showImage(e.target.files[0]));
 document.getElementById("addBox").onclick = () => {
@@ -231,7 +219,7 @@ document.getElementById("addBox").onclick = () => {
   renderBoxes();
   PWQ.toast("已补一个框：按住框身可以移动，按住右下角圆点可以调宽和高，也可以在照片空白处直接拖一个新框。");
 };
-document.getElementById("selectAll").onclick = () => { boxes.forEach((b,i) => { b.selected = true; b.selOrder = i+1; }); renderBoxes(); };
+document.getElementById("retakeBtn2").onclick = async () => { await startCamera(); };
 let sheetCards = [];
 let sheetIndex = 0;
 function openSheet(mode){
@@ -295,7 +283,7 @@ function renderSheet(){
     saveBtn.onclick = async () => {
       await PWQ.ready();
       if (!PWQ.currentUser()) { PWQ.toast("请先去登录页登录，登录后才能把题存到云端。"); location.href = "index.html"; return; }
-      const batch = document.getElementById("batch").value || "未分组";
+      const batch = "未分组";
       const q = { subject: c.subject, qkind: c.qkind, type: c.type, stem: c.stem, options: c.options, answer: c.answer, explain: "", reason: "", batch: batch, starred:false, mastered:false, streak:0, edited:false, note:"" };
       q.explain = await PWQ.explainPlaceholder({stem: q.stem, options: q.options, answer: q.answer, type: q.type});
       c.explain = q.explain;
@@ -307,11 +295,11 @@ function renderSheet(){
 }
 document.getElementById("recognize").onclick = async () => {
   const sel = boxes.filter(b => b.selected).sort((a,b) => (a.selOrder||0) - (b.selOrder||0));
-  if (!sel.length && !document.getElementById("single").checked) {
-    PWQ.toast("请先点方框选至少一道错题；只有一道题时可勾选“只有一道题”。");
+  if (!sel.length) {
+    PWQ.toast("请先点方框选至少一道错题。");
     return;
   }
-  const targets = document.getElementById("single").checked && boxes.length ? [boxes[0]] : sel;
+  const targets = sel;
   if (!currentPhotoDataUrl) { PWQ.toast("请先拍照或从相册选一张照片。"); return; }
   // 先打开抽屉占位，显示正在识别，不用假题目冒充真实识别
   sheetCards = targets.map(() => ({ stem: "正在识别…", options: [], answer: "", subject: "其他", qkind: "选择题", type: "定性辨析类", explain: "" }));
