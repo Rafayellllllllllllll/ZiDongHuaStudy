@@ -26,7 +26,21 @@ function banner(){
     if (main) main.prepend(el);
   }
 }
-function toast(msg){ alert(msg); }
+function toast(msg){
+  // 非阻塞提示：以前用 alert 会卡住页面，必须点确定才能继续，识别时就会一直转。
+  // 现在改成页面底部小条，3 秒自动消失，不挡操作、不卡识别。
+  let el = document.getElementById("pwq-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "pwq-toast";
+    el.style.cssText = "position:fixed;left:16px;right:16px;bottom:80px;z-index:9999;background:#16233a;color:#fff;padding:12px 16px;border-radius:12px;text-align:center;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.2)";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.display = "none"; }, 3000);
+}
 function escapeHtml(s){
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
