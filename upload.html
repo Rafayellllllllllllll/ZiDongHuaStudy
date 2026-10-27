@@ -267,7 +267,7 @@ document.getElementById("recognize").onclick = async () => {
       "<input type='hidden' data-f='answer' value='" + PWQ.escapeHtml(c.answer) + "'>" +
       "<input type='hidden' data-f='subject' value='" + PWQ.escapeHtml(c.subject) + "'>" +
       "<input type='hidden' data-f='qkind' value='" + PWQ.escapeHtml(c.qkind) + "'>" +
-      "<input type='hidden' data-f='type' value='" + PWQ.escapeHtml(c.type) + "'>" +
+      "<input type='hidden' data-f='type' value='" + PWQ.escapeHtml(c.type) + "'>";
     div.querySelector("[data-f='subject']").value = c.subject;
     div.querySelector("[data-f='qkind']").value = c.qkind;
     div.querySelector("[data-f='type']").value = c.type;
