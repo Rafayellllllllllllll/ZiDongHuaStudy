@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 练习</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<header><div class="logo">拍照<span>错题本</span></div>
+<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<main>
+<div class="card"><h1>练习</h1>
+<p>练习前自选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。</p>
+<label>这次练几道？（五的倍数，最多 50）</label>
+<select id="count"><option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option><option>35</option><option>40</option><option>45</option><option>50</option></select>
+<p><button id="start">开始练习</button>
+<button class="secondary" id="review">已掌握复查（隔一段时间抽查，骨架占位）</button></p>
+<p class="small">如果剩下未掌握的题不够你选的数，就按剩下的来。已经会了的题隔一段时间再抽查，抽查错了回到未掌握；按知识点生成同类题以后由 DeepSeek 生成，骨架里是占位按钮。</p>
+<div id="area"></div></div>
+</main><footer>本地骨架 · 练习计数只存本机</footer>
+<script>
+let pool = [], idx = 0;
+function start(){
+  const all = PWQ.getQuestions().filter(q => !q.mastered);
+  // 随机打乱：不按原来顺序。
+  pool = all.sort(() => Math.random() - 0.5)
+    .slice(0, parseInt(document.getElementById("count").value, 10));
+  idx = 0;
+  if (!pool.length) { document.getElementById("area").innerHTML = "<p>没有未掌握的题了，可以去错题库看看，或等已掌握复查。</p>"; return; }
+  show();
+}
+function show(){
+  const q = pool[idx];
+  const area = document.getElementById("area");
+  area.innerHTML = "<div class='qitem'><p>第 " + (idx+1) + " / " + pool.length + " 题 · " +
+    PWQ.escapeHtml(q.subject) + " · " + PWQ.escapeHtml(q.type) + "</p>" +
+    "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
+    "<p>" + q.options.map(o => PWQ.escapeHtml(o)).join("<br>") + "</p>" +
+    "<p class='small'>答的时候先不显示答案和解析。</p>" +
+    "<p><label>你的答案</label><select id='ans'><option>A</option><option>B</option><option>C</option><option>D</option></select></p>" +
+    "<button id='submit'>提交答案</button><div id='result'></div></div>";
+  document.getElementById("submit").onclick = () => {
+    const ans = document.getElementById("ans").value;
+    const ok = ans === q.answer;
+    const qs = PWQ.getQuestions();
+    const target = qs.find(x => x.id === q.id);
+    if (ok) { target.streak = (target.streak || 0) + 1;
+      if (target.streak >= 3) target.mastered = true;
+    } else { target.streak = 0; }
+    PWQ.saveQuestions(qs);
+    document.getElementById("result").innerHTML =
+      "<p>" + (ok ? "答对了。" : "答错了，计数清零，这道题重新回到练习里。") +
+      " 正确答案：" + PWQ.escapeHtml(q.answer) +
+      "；连续做对次数：" + target.streak +
+      (target.mastered ? "；已连续做对三次，标为已经会了。" : "") + "</p>" +
+      "<p>解析：" + PWQ.escapeHtml(q.explain) + "</p>" +
+      "<button id='next'>下一题</button> " +
+      "<button class='secondary' id='similar'>按知识点生成一道同类题（占位）</button>";
+    document.getElementById("next").onclick = () => {
+      idx++;
+      if (idx < pool.length) show();
+      else document.getElementById("area").innerHTML = "<p>这次练习结束了。去错题库看看已经会了的题是怎么标的。</p>";
+    };
+    document.getElementById("similar").onclick = () =>
+      PWQ.toast("占位：同类题以后由 DeepSeek 按知识点生成，当前骨架不真实调用。");
+  };
+}
+document.getElementById("start").onclick = start;
+document.getElementById("review").onclick = () =>
+  PWQ.toast("占位：已掌握复查应隔一段时间（例如一两周，具体天数待定）再随机抽查，抽查错了回到未掌握。当前骨架不自动排期。");
+</script></body></html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 管理</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<header><div class="logo">拍照<span>错题本</span></div>
+<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<main>
+<div class="card"><h1>管理后台（仅管理员）</h1>
+<p>管理员是事先标定的主人账号。能看谁登录、什么时候用、用了多长时间；看不到朋友的错题内容。朋友默认普通用户，看不到这一页。</p>
+<div id="denied" class="warn hidden">当前账号不是管理员，或未配置管理员账号（config.js 里的 ADMIN_ACCOUNT），所以看不到管理数据。真实版应由后端按账号角色校验，不能只靠前端隐藏。</div>
+<div id="ok" class="hidden">
+<table><tr><th>账号</th><th>登录时间</th><th>用时</th></tr>
+<tr><td>示例朋友A（骨架演示数据）</td><td>2026-10-27 13:00</td><td>25 分钟</td></tr>
+<tr><td>示例朋友B（骨架演示数据）</td><td>2026-10-27 12:30</td><td>10 分钟</td></tr>
+</table>
+<p class="small">真实登录记录、用时统计应由后端在登录 / 活动时记录，骨架里是演示数据。注册时不特意向朋友说明管理员能看到这些使用记录（按用户对齐）。</p>
+<p><button class="secondary" onclick="alert('占位：一键退出所有设备需后端吊销会话，当前骨架只退出本机。'); localStorage.removeItem('pwq_user'); location.href='index.html';">一键退出所有设备（占位）</button></p>
+</div></div>
+</main><footer>本地骨架</footer>
+<script>
+const ok = PWQ.isAdmin();
+document.getElementById("denied").classList.toggle("hidden", ok);
+document.getElementById("ok").classList.toggle("hidden", !ok);
+if (!PWQ.configured) {
+  // 未配置时也提示：即使本地演示账号与占位管理员名相同，也不是真实校验。
+}
+</script></body></html>

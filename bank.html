@@ -1,0 +1,77 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 错题库</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<header><div class="logo">拍照<span>错题本</span></div>
+<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<main>
+<div class="card"><h1>错题库</h1>
+<p>按学科自动分类，学科分错可手动改。已经会了的题仍在这里可见，并格外标出。</p>
+<label>按学科筛选</label><select id="filter"><option value="">全部</option><option>语文</option><option>数学</option><option>政治</option><option>物理</option><option>计算机</option><option>其他</option></select>
+<label><input type="checkbox" id="onlyStar" style="width:auto"> 只看星标题</label>
+<label><input type="checkbox" id="onlyMastered" style="width:auto"> 只看已经会了的题</label>
+<div id="stats"></div>
+<div id="list"></div>
+<p><button class="secondary" onclick="window.print()">导出打印（浏览器打印）</button>
+<a class="btn ghost" href="practice.html">去练习</a></p>
+<p class="small">真实导出（PDF / 打印卷）与薄弱统计应以后端数据为准；骨架里按本机演示数据统计。</p></div>
+</main><footer>本地骨架 · 未接通 Supabase</footer>
+<script>
+function render(){
+  const qs = PWQ.getQuestions();
+  const f = document.getElementById("filter").value;
+  const onlyStar = document.getElementById("onlyStar").checked;
+  const onlyM = document.getElementById("onlyMastered").checked;
+  const counts = {};
+  qs.forEach(q => counts[q.subject] = (counts[q.subject] || 0) + 1);
+  const reasons = {};
+  qs.forEach(q => reasons[q.reason] = (reasons[q.reason] || 0) + 1);
+  document.getElementById("stats").innerHTML =
+    "<p>薄弱统计（骨架演示）：按学科 " + JSON.stringify(counts) +
+    "；按错因 " + JSON.stringify(reasons) + "</p>";
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  qs.filter(q => (!f || q.subject === f) && (!onlyStar || q.starred) && (!onlyM || q.mastered))
+    .forEach(q => {
+      const d = document.createElement("div");
+      d.className = "qitem" + (q.mastered ? " mastered" : "");
+      d.innerHTML =
+        "<p><span class='tag'>" + PWQ.escapeHtml(q.subject) + "</span>" +
+        (q.qkind ? "<span class='tag'>" + PWQ.escapeHtml(q.qkind) + "</span>" : "") +
+        "<span class='tag pink'>" + PWQ.escapeHtml(q.type) + "</span>" +
+        "<span class='tag'>" + PWQ.escapeHtml(q.reason) + "</span>" +
+        "<span class='tag'>" + PWQ.escapeHtml(q.batch) + "</span>" +
+        (q.mastered ? "<span class='tag pink'>已经会了</span>" : "") +
+        (q.edited ? "<span class='tag'>手动改过</span>" : "") +
+        (q.starred ? "<span class='tag'>★已收藏</span>" : "") + "</p>" +
+        "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
+        "<p>" + q.options.map(o => PWQ.escapeHtml(o)).join("<br>") + "</p>" +
+        "<p>正确答案：" + PWQ.escapeHtml(q.answer) + "（练习时答前不显示，答完才显示）</p>" +
+        "<p>解析：" + PWQ.escapeHtml(q.explain) + "</p>" +
+
+      const star = document.createElement("button");
+      star.textContent = q.starred ? "取消星星" : "点星星收藏到易错题";
+      star.onclick = () => { q.starred = !q.starred; PWQ.saveQuestions(qs); render(); };
+      const edit = document.createElement("button");
+      edit.className = "secondary"; edit.textContent = "改解析 / 改题干";
+      edit.onclick = () => {
+        const ne = prompt("改解析（改过的会标手动改过、不锁定，还能再改）：", q.explain);
+        if (ne !== null) { q.explain = ne; q.edited = true; PWQ.saveQuestions(qs); render(); }
+      };
+      const copy = document.createElement("button");
+      copy.className = "ghost"; copy.textContent = "一键复制解析";
+      copy.onclick = async () => {
+        try { await navigator.clipboard.writeText(q.explain); PWQ.toast("已复制解析。"); }
+        catch(e){ PWQ.toast("复制失败，请手动长按复制解析文字。"); }
+      };
+      d.append(star, edit, copy, subj, del);
+      list.appendChild(d);
+    });
+  if (!list.children.length) list.innerHTML = "<p>这里还没有符合条件的题。先去录错题。</p>";
+}
+["filter","onlyStar","onlyMastered"].forEach(id =>
+  document.getElementById(id).addEventListener("change", render));
+render();
+</script></body></html>

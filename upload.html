@@ -1,0 +1,108 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 录错题</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<header><div class="logo">拍照<span>错题本</span></div>
+<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<main>
+<div class="card"><h1>录错题</h1>
+<p>照片只用来提取文字，不存照片。拍完或传完后，照片只在本页预览，保存的只有提取出来的文字。</p>
+<label>1. 拍照或上传图片</label>
+<p><label class="btn">直接拍照<input type="file" accept="image/*" capture="environment" id="camera" class="hidden"></label>
+<label class="btn secondary">上传已有图片<input type="file" accept="image/*" id="file" class="hidden"></label></p>
+<label>试卷 / 日期分组（选填）</label><input id="batch" placeholder="例如：2026-10-27 试卷A">
+<label><input type="checkbox" id="single" style="width:auto"> 这张照片里只有一道题（勾选后不用额外指定，直接按这一道处理）</label>
+<div class="photo-stage" id="stage"><p style="padding:20px">还没选照片。选照片后，这里会出现透明色方框（骨架演示框）。</p></div>
+<p><button type="button" class="secondary" id="addBox">手动补框：没框住的题，拖一下补框再选</button>
+<button type="button" id="selectAll">全选已框的题</button></p>
+<p class="small">用法：直接点方框选错题，点中的和没点中的颜色不一样。不用填题号。没框住的题用“手动补框”。</p>
+</div>
+
+<div class="card mint"><h2>2. 识别与校对</h2>
+<p class="small">真实流程：先做题目框选和文字识别（OCR + 题目切分），再由 DeepSeek 生成解析。骨架里识别是占位演示。</p>
+<p><button id="recognize">识别所选题目</button></p>
+<div id="unclear" class="warn hidden">识别不清楚或不确定：请重新拍一下再录。建议光线亮一点、拍正一点、离近一点、不要抖。拍清楚了才能录，不能悄悄录不清楚的题。</div>
+<div id="proof" class="hidden">
+<label>题干（校对后可改）</label><textarea id="stem" rows="3">示例题干：请校对后确认。</textarea>
+<label>选项（校对后可改）</label><textarea id="options" rows="4">A. 示例选项一
+B. 示例选项二
+C. 示例选项三
+D. 示例选项四</textarea>
+<label>正确答案（先确认，再生成解析）</label><select id="answer"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+<label>学科（自动分类，分错可手动改）</label><select id="subject">
+<option>语文</option><option>数学</option><option>政治</option><option>物理</option>
+<option>计算机</option><option>其他</option></select>
+<label>大题型</label><select id="qkind"><option>选择题</option><option>判断题</option><option>主观题</option></select>
+<label>解析类型（网站自主判断）</label><select id="type"><option>定量计算类</option><option>定性辨析类</option></select>
+<label>错因标签</label><select id="reason"><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>
+<p><button id="saveQ">确认无误，保存到错题库</button></p>
+<p class="small">重复上传提醒、学科自动分类、真实 OCR 框选、真实 DeepSeek 解析均为待接通的占位，见 README。</p>
+</div></div>
+</main><footer>本地骨架 · 照片不上传、不存储</footer>
+<script>
+let boxes = [];
+const stage = document.getElementById("stage");
+function renderBoxes(){
+  stage.querySelectorAll(".qbox").forEach(n => n.remove());
+  boxes.forEach((b, i) => {
+    const d = document.createElement("div");
+    d.className = "qbox" + (b.selected ? " selected" : "");
+    d.style.left = b.x + "%"; d.style.top = b.y + "%";
+    d.style.width = b.w + "%"; d.style.height = b.h + "%";
+    d.innerHTML = "<span>第 " + (i+1) + " 题" + (b.selected ? " ✓已选" : "") + "</span>";
+    d.onclick = () => { b.selected = !b.selected; renderBoxes(); };
+    stage.appendChild(d);
+  });
+}
+function showImage(file){
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  stage.innerHTML = '<img id="photo" src="' + url + '" alt="上传的照片预览（不存储）">';
+  // 骨架演示框：真实框选应由题目切分算法生成，这里先给两个示例框用于走流程。
+  boxes = [
+    {x:5,y:8,w:90,h:38,selected:false},
+    {x:5,y:52,w:90,h:38,selected:false},
+  ];
+  if (document.getElementById("single").checked) boxes = [boxes[0]];
+  renderBoxes();
+}
+document.getElementById("camera").addEventListener("change", e => showImage(e.target.files[0]));
+document.getElementById("file").addEventListener("change", e => showImage(e.target.files[0]));
+document.getElementById("addBox").onclick = () => {
+  // 骨架简化版手动补框：点一下加一个框；真实版应支持在照片上拖动框选。
+  boxes.push({x:5, y:10 + boxes.length*8, w:90, h:20, selected:false});
+  renderBoxes();
+  PWQ.toast("骨架演示：已补一个框。真实版应在照片上拖动补框，见 README。");
+};
+document.getElementById("selectAll").onclick = () => { boxes.forEach(b => b.selected = true); renderBoxes(); };
+document.getElementById("recognize").onclick = () => {
+  const sel = boxes.filter(b => b.selected);
+  if (!sel.length && !document.getElementById("single").checked) {
+    PWQ.toast("请先点方框选至少一道错题；只有一道题时可勾选“只有一道题”。");
+    return;
+  }
+  // 骨架演示：用确认框模拟“识别不清”分支；真实版应按识别置信度自动判断。
+  const unclear = confirm("骨架演示：点“确定”模拟识别清楚，进入校对；点“取消”模拟识别不清，提示重拍。\n真实版：识别不清或不确定时必须自动提示重拍，不能悄悄录入。");
+  document.getElementById("unclear").classList.toggle("hidden", unclear);
+  document.getElementById("proof").classList.toggle("hidden", !unclear);
+};
+document.getElementById("saveQ").onclick = async () => {
+  const qs = PWQ.getQuestions();
+  // TODO(后端)：重复上传提醒应先查库比对题干，重复时提示已存在。
+  const q = { id: "q" + Date.now(), subject: document.getElementById("subject").value,
+    qkind: document.getElementById("qkind").value,
+    type: document.getElementById("type").value,
+    stem: document.getElementById("stem").value,
+    options: document.getElementById("options").value.split("\n").filter(Boolean),
+    answer: document.getElementById("answer").value,
+    explain: await PWQ.explainPlaceholder({type: document.getElementById("type").value}),
+    reason: document.getElementById("reason").value,
+    batch: document.getElementById("batch").value || "未分组",
+    starred:false, mastered:false, streak:0, edited:false, note:"" };
+  qs.push(q); PWQ.saveQuestions(qs);
+  PWQ.toast("骨架演示：已保存到本机错题库（未接通真实后端）。");
+  location.href = "bank.html";
+};
+</script></body></html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 笔记本</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<header><div class="logo">拍照<span>错题本</span></div>
+<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<main>
+<div class="card"><h1>笔记本</h1>
+<p>新开的一页，自己粘贴知识点，和难题、易错题都没关系。默认黑色，标记重点时再改成红或蓝，每条可以不一样。</p>
+<form id="f"><label>粘贴一条知识点</label><textarea id="text" rows="3" required placeholder="粘贴知识点，例如：先乘除后加减。"></textarea>
+<label>颜色</label><select id="color"><option value="black">黑色（默认）</option><option value="red">红色</option><option value="blue">蓝色</option></select>
+<button type="submit">加一条</button></form>
+<div id="list"></div></div>
+</main><footer>本地骨架 · 笔记本只存本机（未接通后端）</footer>
+<script>
+function getNotes(){ try { return JSON.parse(localStorage.getItem("pwq_notes") || "[]"); } catch(e) { return []; } }
+function saveNotes(n){ localStorage.setItem("pwq_notes", JSON.stringify(n)); }
+function render(){
+  const notes = getNotes(); const list = document.getElementById("list"); list.innerHTML = "";
+  if (!notes.length) list.innerHTML = "<p>还没有知识点，上面粘贴一条试试。</p>";
+  notes.forEach((n, i) => {
+    const d = document.createElement("div"); d.className = "qitem";
+    const sel = document.createElement("select");
+    [["black","黑色"],["red","红色"],["blue","蓝色"]].forEach(([v, label]) => {
+      const o = document.createElement("option"); o.value = v; o.textContent = label; if (n.color === v) o.selected = true; sel.appendChild(o);
+    });
+    sel.onchange = () => { notes[i].color = sel.value; saveNotes(notes); render(); };
+    const p = document.createElement("p"); p.textContent = n.text; p.style.color = n.color || "black";
+    const del = document.createElement("button"); del.className = "ghost"; del.textContent = "删除";
+    del.onclick = () => { notes.splice(i, 1); saveNotes(notes); render(); };
+    d.append(p, sel, del); list.appendChild(d);
+  });
+}
+document.getElementById("f").addEventListener("submit", e => {
+  e.preventDefault();
+  const notes = getNotes();
+  notes.push({ text: document.getElementById("text").value.trim(), color: document.getElementById("color").value });
+  saveNotes(notes); document.getElementById("text").value = ""; render();
+});
+render();
+</script></body></html>
