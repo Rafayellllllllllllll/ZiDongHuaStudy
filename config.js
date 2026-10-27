@@ -15,4 +15,5 @@ window.APP_CONFIG = {
   // DeepSeek 调用：前端不直接调 DeepSeek，走 Supabase Edge Function 代理。
   // 函数部署好之前，前端会自动回落到模板解析，不会报错。
   EXPLAIN_FUNCTION_URL: "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/explain",
+  VISION_FUNCTION_URL: "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision",
 };

@@ -48,11 +48,13 @@ D.
 <label>解析类型（网站自主判断）</label><select id="type"><option>定量计算类</option><option>定性辨析类</option></select>
 <label>错因标签</label><select id="reason"><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>
 <p><button id="saveQ">确认无误，保存到错题库</button></p>
-<p class="small">实话：现在识别还读不出照片里的题目文字，题干和选项不会自动填，需要手动输入。框选只是框住题目位置，文字提取和 DeepSeek 解析仍未接通，见 README。</p>
+<p class="small">视觉识别：已换成能看图的 DeepSeek 模型（deepseek-flash），点“识别”会把选中框裁出来发给模型读题干和选项，自动填进表单；读不出来时再手动输入。照片只临时发给模型看一次，不存云端。</p>
 </div></div>
 </main><footer>云端版 · 照片不上传、不存储，保存的文字存在 Supabase</footer>
 <script>
 let boxes = [];
+let currentPhotoFile = null;
+let currentPhotoDataUrl = "";
 let camStream = null;
 let facing = "environment";
 const stage = document.getElementById("stage");
@@ -154,6 +156,10 @@ stage.addEventListener("pointerup", (e) => {
 });
 async function showImage(file){
   if (!file) return;
+  currentPhotoFile = file;
+  const reader = new FileReader();
+  reader.onload = () => { currentPhotoDataUrl = reader.result; };
+  reader.readAsDataURL(file);
   const url = URL.createObjectURL(file);
   stage.innerHTML = '<img id="photo" src="' + url + '" alt="上传的照片预览（不存储）">';
   boxes = [];
@@ -224,17 +230,50 @@ document.getElementById("addBox").onclick = () => {
   PWQ.toast("已补一个框：按住框身可以移动，按住右下角圆点可以调宽和高，也可以在照片空白处直接拖一个新框。");
 };
 document.getElementById("selectAll").onclick = () => { boxes.forEach(b => b.selected = true); renderBoxes(); };
-document.getElementById("recognize").onclick = () => {
+document.getElementById("recognize").onclick = async () => {
   const sel = boxes.filter(b => b.selected);
   if (!sel.length && !document.getElementById("single").checked) {
     PWQ.toast("请先点方框选至少一道错题；只有一道题时可勾选“只有一道题”。");
     return;
   }
-  // 实话：现在识别还读不出照片里的题目文字，所以不会自动填题干和选项。
-  // 点“识别”后直接进校对页，题干和选项是空的，需要你手动输入，这是目前的真实状态，不是你拍错了。
-  document.getElementById("unclear").classList.add("hidden");
-  document.getElementById("proof").classList.remove("hidden");
-  PWQ.toast("识别没有读出题目文字，题干和选项是空的，请手动输入后再保存。");
+  if (!currentPhotoDataUrl) { PWQ.toast("请先拍照或从相册选一张照片。"); return; }
+  // 真视觉识别：把选中的框裁出来，发给能看图的 DeepSeek（deepseek-flash），让它读题干和选项，自动填进表单。
+  // 照片只临时发给模型看一次，不存云端、不存 GitHub。
+  PWQ.toast("正在用能看图的模型读题目，请稍等…");
+  try {
+    const img = document.getElementById("photo");
+    const box = sel[0];
+    // 裁出选中框的图
+    const canvas = document.createElement("canvas");
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
+    const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
+    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+    canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    const cropDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+    const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
+    const anon = window.APP_CONFIG ? window.APP_CONFIG.SUPABASE_ANON_KEY : "";
+    const res = await fetch(visionUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anon, "apikey": anon },
+      body: JSON.stringify({ image: cropDataUrl }),
+    });
+    const data = await res.json();
+    document.getElementById("unclear").classList.add("hidden");
+    document.getElementById("proof").classList.remove("hidden");
+    if (data.stem) {
+      document.getElementById("stem").value = data.stem;
+      document.getElementById("options").value = (data.options || []).join("\n");
+      PWQ.toast("识别成功，已自动填好题干和选项，请核对一下再保存。");
+    } else {
+      document.getElementById("stem").value = "";
+      document.getElementById("options").value = "";
+      PWQ.toast("这次没读出来，请手动输入题干和选项。");
+    }
+  } catch(e) {
+    document.getElementById("proof").classList.remove("hidden");
+    PWQ.toast("识别没跑起来，请手动输入题干和选项。");
+  }
 };
 document.getElementById("saveQ").onclick = async () => {
   await PWQ.ready();
