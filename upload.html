@@ -1,43 +1,55 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>拍照错题本 · 录错题</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script>
 <style>
-.cam-wrap{position:relative;border:3px solid #2b2b3a;border-radius:16px;overflow:hidden;background:#000;min-height:320px}
-.cam-wrap video{width:100%;display:block;background:#000}
-.cam-wrap img{width:100%;display:block}
-.cam-controls{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;padding:12px;pointer-events:none}
+/* 全屏相机：点进这一页，整个屏幕就是相机，不再是页面里一小块。 */
+.camscreen{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column}
+.camscreen video{flex:1;width:100%;height:100%;object-fit:cover;background:#000}
+.cam-top{display:flex;justify-content:space-between;align-items:center;padding:12px;color:#fff;background:rgba(0,0,0,.55)}
+.cam-top a{color:#fff;text-decoration:none;font-weight:800}
+.cam-tip{font-size:13px;text-align:right;max-width:70%}
+.cam-controls{display:flex;justify-content:space-between;align-items:flex-end;padding:18px 20px 28px;background:rgba(0,0,0,.55)}
 .cam-controls button{pointer-events:auto}
-.album-btn{width:56px;height:56px;border-radius:12px;border:3px solid #fff;background:#fffdf7;font-size:24px}
-.shoot-btn{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#ff4d8d;color:#fff;font-size:14px;font-weight:900}
-.cam-tip{position:absolute;top:10px;left:10px;right:10px;color:#fff;background:rgba(0,0,0,.5);border-radius:10px;padding:6px 10px;font-size:13px;text-align:center}
+.album-btn{width:56px;height:56px;border-radius:12px;border:3px solid #fff;background:#fffdf7;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.shoot-btn{width:76px;height:76px;border-radius:50%;border:4px solid #fff;background:#ff4d8d;color:#fff;font-size:14px;font-weight:900}
+.switch-btn{background:#fff;color:#2b2b3a;border:3px solid #2b2b3a;border-radius:999px;padding:10px 14px;font-weight:800}
+/* 照片全宽：拍完的题在屏幕上占满宽，不再是小卡片里一小块。 */
+.photo-stage{position:relative;border:3px solid #2b2b3a;border-radius:16px;overflow:hidden;background:#fff;min-height:220px}
+.photo-stage img{width:100%;display:block}
+/* 框可拖、可调宽高：点框选错题，拖框身移动，拖右下角小角调宽和高。 */
+.qbox{position:absolute;border:3px solid #ff4d8d;background:rgba(255,184,209,.28);border-radius:10px;cursor:move;touch-action:none}
+.qbox.selected{background:rgba(184,241,214,.45);border-color:#0a9d6b}
+.qbox span{position:absolute;top:2px;left:6px;background:#fff;border:2px solid #2b2b3a;border-radius:999px;padding:0 8px;font-size:12px;font-weight:800;pointer-events:none}
+.qbox .handle{position:absolute;right:-6px;bottom:-6px;width:24px;height:24px;background:#ff4d8d;border:3px solid #fff;border-radius:50%;cursor:nwse-resize}
+.qbox .del{position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#fff;border:2px solid #2b2b3a;border-radius:50%;font-weight:900;line-height:20px;text-align:center;cursor:pointer}
+main{padding-bottom:90px}
 </style></head><body>
+<div class="camscreen" id="camScreen">
+<div class="cam-top"><a href="home.html">← 回主页</a><span class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</span></div>
+<video id="camVideo" autoplay playsinline muted></video>
+<div class="cam-controls">
+<button type="button" class="switch-btn" id="switchCam">换摄像头</button>
+<button type="button" class="shoot-btn" id="shootBtn">拍照</button>
+<label class="album-btn" title="打开相册，选已有照片">🖼️<input type="file" accept="image/*" id="file" class="hidden"></label>
+</div>
+</div>
+<canvas id="camCanvas" class="hidden"></canvas>
 <header><div class="logo">拍照<span>错题本</span></div></header>
 <main>
 <div class="card"><h1>录错题</h1>
 <p>照片只用来提取文字，不存照片。拍完或传完后，照片只在本页预览，保存的只有提取出来的文字。</p>
-<label>1. 对着题目拍照</label>
-<p class="small">点开这一页就直接是相机视角，对着题目拍。右下角是相册，点开可以从相册里选已有的照片，不用每次都现拍。</p>
-<div class="cam-wrap" id="camWrap">
-<video id="camVideo" autoplay playsinline muted></video>
-<div class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</div>
-<div class="cam-controls">
-<button type="button" class="secondary" id="switchCam">换摄像头</button>
-<button type="button" class="shoot-btn" id="shootBtn">拍照</button>
-<label class="album-btn" title="打开相册">🖼️<input type="file" accept="image/*" id="file" class="hidden"></label>
-</div>
-</div>
-<canvas id="camCanvas" class="hidden"></canvas>
-<p><button type="button" class="secondary" id="retakeBtn" style="display:none">重拍 / 回到相机</button>
+<p><button type="button" class="secondary" id="retakeBtn">重拍 / 回到全屏相机</button>
 <button type="button" class="secondary" id="oldCameraBtn">打不开相机？用系统相机拍照</button><input type="file" accept="image/*" capture="environment" id="camera" class="hidden"></p>
 <label>试卷 / 日期分组（选填）</label><input id="batch" placeholder="例如：2026-10-27 试卷A">
 <label><input type="checkbox" id="single" style="width:auto"> 这张照片里只有一道题（勾选后不用额外指定，直接按这一道处理）</label>
-<div class="photo-stage" id="stage"><p style="padding:20px">还没选照片。拍完或从相册选完后，这里会出现透明色方框（骨架演示框）。</p></div>
-<p><button type="button" class="secondary" id="addBox">手动补框：没框住的题，拖一下补框再选</button>
+<div class="photo-stage" id="stage"><p style="padding:20px">还没选照片。拍完或从相册选完后，照片会在这里满宽显示。</p></div>
+<p><button type="button" class="secondary" id="addBox">手动补框：在照片上拖一下，框出没框住的题</button>
 <button type="button" id="selectAll">全选已框的题</button></p>
-<p class="small">用法：直接点方框选错题，点中的和没点中的颜色不一样。不用填题号。没框住的题用“手动补框”。</p>
+<p class="small">框怎么调：点框是选 / 取消选；按住框身拖动可以移动框；按住框右下角粉色圆点拖动，可以调框的宽和高，调到刚好框住一道题为止。框不准先别急着保存，先调好框。</p>
+<p class="small" id="ocrNote"></p>
 </div>
 
 <div class="card mint"><h2>2. 识别与校对</h2>
@@ -58,7 +70,7 @@ D. 示例选项四</textarea>
 <label>解析类型（网站自主判断）</label><select id="type"><option>定量计算类</option><option>定性辨析类</option></select>
 <label>错因标签</label><select id="reason"><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>
 <p><button id="saveQ">确认无误，保存到错题库</button></p>
-<p class="small">智能框选第一版：本机文字识别找题号切框，照片不上传。题号拍不清、横拍竖拍、题号被手写遮住时可能切不准，可手动补框。学科自动分类、真实 DeepSeek 解析仍为占位，见 README。</p>
+<p class="small">智能框选说明：上一版本机文字识别在数学符号、横拍照片、题号被手写遮住时经常认不出题号，已改为“识别不到就直接说识别不到、给手动框选”，不再给假框。学科自动分类、真实 DeepSeek 解析仍为占位，见 README。</p>
 </div></div>
 </main><footer>云端版 · 照片不上传、不存储，保存的文字存在 Supabase</footer>
 <script>
@@ -68,7 +80,9 @@ let facing = "environment";
 const stage = document.getElementById("stage");
 const video = document.getElementById("camVideo");
 const tip = document.getElementById("camTip");
+const camScreen = document.getElementById("camScreen");
 async function startCamera(){
+  camScreen.style.display = "flex";
   try {
     if (camStream) camStream.getTracks().forEach(t => t.stop());
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
@@ -76,13 +90,15 @@ async function startCamera(){
     video.style.display = "block";
     tip.textContent = "对着题目，点中间粉色按钮拍照，右下角相册可以选已有照片";
   } catch(e) {
-    tip.textContent = "相机打不开：请允许相机权限，或点下面“打不开相机？用系统相机拍照”";
+    tip.textContent = "相机打不开：请允许相机权限，或点下面“打不开相机？用系统相机拍照”，也可以直接点右下角相册";
     video.style.display = "none";
   }
 }
 function stopCamera(){
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  camScreen.style.display = "none";
 }
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 function renderBoxes(){
   stage.querySelectorAll(".qbox").forEach(n => n.remove());
   boxes.forEach((b, i) => {
@@ -90,21 +106,85 @@ function renderBoxes(){
     d.className = "qbox" + (b.selected ? " selected" : "");
     d.style.left = b.x + "%"; d.style.top = b.y + "%";
     d.style.width = b.w + "%"; d.style.height = b.h + "%";
-    d.innerHTML = "<span>" + (b.label || ("第 " + (i+1) + " 题")) + (b.selected ? " ✓已选" : "") + "</span>";
-    d.onclick = () => { b.selected = !b.selected; renderBoxes(); };
+    d.innerHTML = "<span>" + (b.label || ("第 " + (i+1) + " 题")) + (b.selected ? " ✓已选" : "") + "</span><div class=\"del\" title=\"删掉这个框\">×</div><div class=\"handle\" title=\"拖这个圆点调宽和高\"></div>";
+    // 点框身：选 / 取消选；拖框身：移动；拖右下角圆点：调宽和高；点 ×：删框。
+    let mode = null, startX = 0, startY = 0, orig = null;
+    const posOf = (e) => {
+      const r = stage.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: (t.clientX - r.left) / r.width * 100, y: (t.clientY - r.top) / r.height * 100 };
+    };
+    d.addEventListener("pointerdown", (e) => {
+      if (e.target.classList.contains("del")) return;
+      mode = e.target.classList.contains("handle") ? "resize" : "move";
+      const p = posOf(e);
+      startX = p.x; startY = p.y;
+      orig = { x: b.x, y: b.y, w: b.w, h: b.h };
+      d.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+    d.addEventListener("pointermove", (e) => {
+      if (!mode) return;
+      const p = posOf(e);
+      const dx = p.x - startX, dy = p.y - startY;
+      if (mode === "move") {
+        b.x = clamp(orig.x + dx, 0, 100 - b.w);
+        b.y = clamp(orig.y + dy, 0, 100 - b.h);
+      } else {
+        b.w = clamp(orig.w + dx, 5, 100 - b.x);
+        b.h = clamp(orig.h + dy, 3, 100 - b.y);
+      }
+      d.style.left = b.x + "%"; d.style.top = b.y + "%";
+      d.style.width = b.w + "%"; d.style.height = b.h + "%";
+    });
+    d.addEventListener("pointerup", (e) => {
+      if (!mode) return;
+      const p = posOf(e);
+      const moved = Math.abs(p.x - startX) + Math.abs(p.y - startY);
+      mode = null;
+      if (moved < 1) { b.selected = !b.selected; }
+      renderBoxes();
+    });
+    d.querySelector(".del").onclick = (e) => {
+      e.stopPropagation();
+      boxes.splice(i, 1);
+      renderBoxes();
+    };
     stage.appendChild(d);
   });
 }
+// 在照片上拖一下，补一个新框：按住空白处拖动，松手就生成一个框。
+let dragStart = null;
+stage.addEventListener("pointerdown", (e) => {
+  if (e.target !== stage && e.target.tagName !== "IMG") return;
+  const r = stage.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  dragStart = { x: (t.clientX - r.left) / r.width * 100, y: (t.clientY - r.top) / r.height * 100 };
+});
+stage.addEventListener("pointerup", (e) => {
+  if (!dragStart) return;
+  const r = stage.getBoundingClientRect();
+  const t = e.changedTouches ? e.changedTouches[0] : e;
+  const x2 = (t.clientX - r.left) / r.width * 100, y2 = (t.clientY - r.top) / r.height * 100;
+  const x = Math.min(dragStart.x, x2), y = Math.min(dragStart.y, y2);
+  const w = Math.abs(x2 - dragStart.x), h = Math.abs(y2 - dragStart.y);
+  dragStart = null;
+  if (w > 3 && h > 2) {
+    boxes.push({ x: x, y: y, w: w, h: h, selected: false, label: "手动框 " + (boxes.length + 1) });
+    renderBoxes();
+  }
+});
 async function showImage(file){
   if (!file) return;
   const url = URL.createObjectURL(file);
   stage.innerHTML = '<img id="photo" src="' + url + '" alt="上传的照片预览（不存储）">';
   boxes = [];
   renderBoxes();
+  stopCamera();
   document.getElementById("stage").scrollIntoView({behavior:"smooth"});
-  // 智能框选第一版：用浏览器里的文字识别（Tesseract.js）找题号位置，再按题号切框。
-  // 不用上传照片到服务器，识别只在本机跑，照片不存云端。
-  // 如果识别失败或找不到题号，就回落到提示手动框选，不再给固定假框。
+  document.getElementById("ocrNote").textContent = "正在试智能框选…如果一会儿没出框，说明这次没认出题号，请直接在照片上拖一下手动框选，不要等。";
+  // 智能框选：本机文字识别找题号。上一版在数学题、横拍照片上经常认不出，
+  // 这次改成：认不出就直接说认不出，不再给固定假框，手动框选才是兜底。
   try {
     const script = document.createElement("script");
     script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
@@ -114,18 +194,16 @@ async function showImage(file){
     const result = await worker.recognize(file);
     await worker.terminate();
     const words = (result.data.words || []).filter(w => w && w.bbox);
-    // 找题号：单独的数字 + 点/顿号，例如 10. 11. 12.，或“第10题”
     const starts = [];
     for (const w of words) {
       const txt = (w.text || "").trim();
       const m = txt.match(/^(\d{1,2})[\.、．]/) || txt.match(/^第(\d{1,2})题/);
-      if (m) starts.push({ n: parseInt(m[1], 10), x0: w.bbox.x0, y0: w.bbox.y0, x1: w.bbox.x1, y1: w.bbox.y1 });
+      if (m) starts.push({ n: parseInt(m[1], 10), x0: w.bbox.x0, y0: w.bbox.y0 });
     }
     starts.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
     const img = document.getElementById("photo");
-    const W = img.naturalWidth || 1000, H = img.naturalHeight || 1000;
+    const H = img.naturalHeight || 1000;
     if (starts.length >= 1 && !document.getElementById("single").checked) {
-      // 每一题的框：从本话题号顶部开始，到下一话题号顶部结束，左右留边，上下各留一点空。
       for (let i = 0; i < starts.length; i++) {
         const s = starts[i];
         const next = starts[i+1];
@@ -134,16 +212,16 @@ async function showImage(file){
         boxes.push({ x: 2, y: yTop / H * 100, w: 96, h: (yBottom - yTop) / H * 100, selected: false, label: "第 " + s.n + " 题" });
       }
       renderBoxes();
-      PWQ.toast("已按题号智能框选出 " + boxes.length + " 道题，框不准可以点框取消、或用手动补框再调。");
+      document.getElementById("ocrNote").textContent = "智能框选出 " + boxes.length + " 道题，框不准就拖右下角圆点调宽和高，或拖框身移动。";
     } else if (document.getElementById("single").checked) {
       boxes = [{ x: 2, y: 2, w: 96, h: 96, selected: false, label: "这道题" }];
       renderBoxes();
-      PWQ.toast("只有一道题：已整张框选，点框确认即可。");
+      document.getElementById("ocrNote").textContent = "只有一道题：已整张框选，点框确认即可。";
     } else {
-      PWQ.toast("没找到题号，识别不到题目边界：请用手动补框，在照片上框出每一道题再选。");
+      document.getElementById("ocrNote").textContent = "这次没认出题号（数学符号、横拍、手写遮题号都容易认不出），请直接在照片上拖一下手动框选，框好再点框选错题。";
     }
   } catch(e) {
-    PWQ.toast("智能框选没跑起来（可能是网络或识别失败），请用手动补框框出题目再选。");
+    document.getElementById("ocrNote").textContent = "智能框选没跑起来（可能是网络或识别失败），请直接在照片上拖一下手动框选，框好再点框选错题。";
   }
 }
 function showImageFromCanvas(){
@@ -151,30 +229,21 @@ function showImageFromCanvas(){
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-  canvas.toBlob(blob => {
-    if (!blob) return;
-    showImage(blob);
-    stopCamera();
-    document.getElementById("retakeBtn").style.display = "inline-block";
-    tip.textContent = "已拍好，下面点方框选错题。想重拍点“重拍 / 回到相机”。";
-  }, "image/jpeg", 0.9);
+  canvas.toBlob(blob => { if (blob) showImage(blob); }, "image/jpeg", 0.9);
 }
 document.getElementById("shootBtn").onclick = showImageFromCanvas;
 document.getElementById("switchCam").onclick = async () => {
   facing = facing === "environment" ? "user" : "environment";
   await startCamera();
 };
-document.getElementById("retakeBtn").onclick = async () => {
-  document.getElementById("retakeBtn").style.display = "none";
-  await startCamera();
-};
+document.getElementById("retakeBtn").onclick = async () => { await startCamera(); };
 document.getElementById("oldCameraBtn").onclick = () => document.getElementById("camera").click();
 document.getElementById("camera").addEventListener("change", e => showImage(e.target.files[0]));
 document.getElementById("file").addEventListener("change", e => showImage(e.target.files[0]));
 document.getElementById("addBox").onclick = () => {
   boxes.push({x:5, y:10 + boxes.length*8, w:90, h:20, selected:false, label:"手动框 " + (boxes.length+1)});
   renderBoxes();
-  PWQ.toast("骨架演示：已补一个框。真实版应在照片上拖动补框，见 README。");
+  PWQ.toast("已补一个框：按住框身可以移动，按住右下角圆点可以调宽和高，也可以在照片空白处直接拖一个新框。");
 };
 document.getElementById("selectAll").onclick = () => { boxes.forEach(b => b.selected = true); renderBoxes(); };
 document.getElementById("recognize").onclick = () => {
@@ -207,7 +276,7 @@ document.getElementById("saveQ").onclick = async () => {
     location.href = "bank.html";
   } catch(e) { PWQ.toast(String(e.message || e)); }
 };
-// 点开这一页就直接打开相机，不用再点一次拍照按钮。
+// 点开这一页就直接是全屏相机，不用再点一次拍照按钮。
 startCamera();
 window.addEventListener("beforeunload", stopCamera);
 </script>
