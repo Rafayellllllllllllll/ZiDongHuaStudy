@@ -34,21 +34,10 @@
 <p><button id="recognize">识别所选题目</button></p>
 <div id="unclear" class="warn hidden">识别不清楚或不确定：请重新拍一下再录。建议光线亮一点、拍正一点、离近一点、不要抖。拍清楚了才能录，不能悄悄录不清楚的题。</div>
 <div id="proof" class="hidden">
-<label>题干（校对后可改）</label><textarea id="stem" rows="3" placeholder="这里本来应该自动填你照片里的题目，但现在识别还读不出来，请手动输入题干"></textarea>
-<label>选项（校对后可改）</label><textarea id="options" rows="4" placeholder="A. 
-B. 
-C. 
-D. 
-手动输入每个选项，一行一个"></textarea>
-<label>正确答案（先确认，再生成解析）</label><select id="answer"><option>A</option><option>B</option><option>C</option><option>D</option></select>
-<label>学科（自动分类，分错可手动改）</label><select id="subject">
-<option>语文</option><option>数学</option><option>政治</option><option>物理</option>
-<option>计算机</option><option>其他</option></select>
-<label>大题型</label><select id="qkind"><option>选择题</option><option>判断题</option><option>主观题</option></select>
-<label>解析类型（网站自主判断）</label><select id="type"><option>定量计算类</option><option>定性辨析类</option></select>
-<label>错因标签</label><select id="reason"><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>
-<p><button id="saveQ">确认无误，保存到错题库</button></p>
-<p class="small">视觉识别：已换成能看图的 DeepSeek 模型（deepseek-flash），点“识别”会把选中框裁出来发给模型读题干和选项，自动填进表单；读不出来时再手动输入。照片只临时发给模型看一次，不存云端。</p>
+<p class="small">选了几道题，下面就从上往下排几个小方框，一个方框就是一道题：上面是题目，中间是选项，下面是解析。正确答案会用绿色标出来，你先确认答案对不对，再点保存。</p>
+<div id="proofList"></div>
+<p><button id="saveAll">确认无误，全部保存到错题库</button></p>
+<p class="small">视觉识别：已换成能看图的 DeepSeek 模型（deepseek-flash），点“识别”会把每个选中框裁出来发给模型读题干、选项和正确答案，自动填进各自的小方框；读不出来时再手动输入。照片只临时发给模型看一次，不存云端。</p>
 </div></div>
 </main><footer>云端版 · 照片不上传、不存储，保存的文字存在 Supabase</footer>
 <script>
@@ -236,64 +225,95 @@ document.getElementById("recognize").onclick = async () => {
     PWQ.toast("请先点方框选至少一道错题；只有一道题时可勾选“只有一道题”。");
     return;
   }
+  const targets = document.getElementById("single").checked && boxes.length ? [boxes[0]] : sel;
   if (!currentPhotoDataUrl) { PWQ.toast("请先拍照或从相册选一张照片。"); return; }
-  // 真视觉识别：把选中的框裁出来，发给能看图的 DeepSeek（deepseek-flash），让它读题干和选项，自动填进表单。
-  // 照片只临时发给模型看一次，不存云端、不存 GitHub。
-  PWQ.toast("正在用能看图的模型读题目，请稍等…");
-  try {
-    const img = document.getElementById("photo");
-    const box = sel[0];
-    // 裁出选中框的图
-    const canvas = document.createElement("canvas");
-    const iw = img.naturalWidth, ih = img.naturalHeight;
-    const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
-    const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
-    canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
-    canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    const cropDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-    const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
-    const anon = window.APP_CONFIG ? window.APP_CONFIG.SUPABASE_ANON_KEY : "";
-    const res = await fetch(visionUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anon, "apikey": anon },
-      body: JSON.stringify({ image: cropDataUrl }),
-    });
-    const data = await res.json();
-    document.getElementById("unclear").classList.add("hidden");
-    document.getElementById("proof").classList.remove("hidden");
-    if (data.stem) {
-      document.getElementById("stem").value = data.stem;
-      document.getElementById("options").value = (data.options || []).join("\n");
-      PWQ.toast("识别成功，已自动填好题干和选项，请核对一下再保存。");
-    } else {
-      document.getElementById("stem").value = "";
-      document.getElementById("options").value = "";
-      PWQ.toast("这次没读出来，请手动输入题干和选项。");
-    }
-  } catch(e) {
-    document.getElementById("proof").classList.remove("hidden");
-    PWQ.toast("识别没跑起来，请手动输入题干和选项。");
+  PWQ.toast("正在用能看图的模型一道一道读题目，请稍等…");
+  const img = document.getElementById("photo");
+  const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
+  const anon = window.APP_CONFIG ? window.APP_CONFIG.SUPABASE_ANON_KEY : "";
+  const cards = [];
+  for (let bi = 0; bi < targets.length; bi++) {
+    const box = targets[bi];
+    let stem = "", options = [], suggested = "";
+    try {
+      const canvas = document.createElement("canvas");
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
+      const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
+      canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+      canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const res = await fetch(visionUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anon, "apikey": anon },
+        body: JSON.stringify({ image: cropDataUrl }),
+      });
+      const data = await res.json();
+      stem = data.stem || ""; options = data.options || []; suggested = data.suggested_answer || "";
+    } catch(e) { stem = ""; options = []; suggested = ""; }
+    cards.push({ stem, options, answer: suggested, subject: "数学", qkind: "选择题", type: "定量计算类", reason: "概念不清" });
   }
+  const list = document.getElementById("proofList");
+  list.innerHTML = "";
+  cards.forEach((c, ci) => {
+    const div = document.createElement("div");
+    div.className = "qitem";
+    div.innerHTML = "<p><b>第 " + (ci+1) + " 题</b> <span class='tag'>" + PWQ.escapeHtml(c.subject) + "</span></p>" +
+      "<label>题目</label><textarea rows='3' data-f='stem'>" + PWQ.escapeHtml(c.stem) + "</textarea>" +
+      "<label>选项（一行一个）</label><textarea rows='4' data-f='options'>" + PWQ.escapeHtml(c.options.join("\n")) + "</textarea>" +
+      "<label>正确答案（模型推断的，先确认，再生成解析）</label><select data-f='answer'><option" + (c.answer==="A"?" selected":"") + ">A</option><option" + (c.answer==="B"?" selected":"") + ">B</option><option" + (c.answer==="C"?" selected":"") + ">C</option><option" + (c.answer==="D"?" selected":"") + ">D</option></select>" +
+      "<div class='opt-preview'></div>" +
+      "<label>学科</label><select data-f='subject'><option>语文</option><option>数学</option><option>政治</option><option>物理</option><option>计算机</option><option>其他</option></select>" +
+      "<label>大题型</label><select data-f='qkind'><option>选择题</option><option>判断题</option><option>主观题</option></select>" +
+      "<label>解析类型</label><select data-f='type'><option>定量计算类</option><option>定性辨析类</option></select>" +
+      "<label>错因标签</label><select data-f='reason'><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>" +
+      "<div class='explain hidden'><b>红笔解析：</b><span data-f='explainText'></span></div>";
+    div.querySelector("[data-f='subject']").value = c.subject;
+    div.querySelector("[data-f='qkind']").value = c.qkind;
+    div.querySelector("[data-f='type']").value = c.type;
+    div.querySelector("[data-f='reason']").value = c.reason;
+    const renderPreview = () => {
+      const opts = div.querySelector("[data-f='options']").value.split("\n").filter(Boolean);
+      const ans = div.querySelector("[data-f='answer']").value;
+      div.querySelector(".opt-preview").innerHTML = opts.map(o => {
+        const letter = o.trim().charAt(0);
+        const isAns = letter === ans;
+        return "<div class='opt " + (isAns ? "correct" : "") + "'><span>" + PWQ.escapeHtml(o) + "</span>" + (isAns ? "<span class='mark'>正确答案</span>" : "") + "</div>";
+      }).join("");
+    };
+    div.querySelector("[data-f='options']").addEventListener("input", renderPreview);
+    div.querySelector("[data-f='answer']").addEventListener("change", renderPreview);
+    renderPreview();
+    list.appendChild(div);
+  });
+  document.getElementById("unclear").classList.add("hidden");
+  document.getElementById("proof").classList.remove("hidden");
+  PWQ.toast("识别完成，共 " + cards.length + " 道题，从上往下排好了，请先确认每道题的正确答案，再点全部保存。");
 };
-document.getElementById("saveQ").onclick = async () => {
+document.getElementById("saveAll").onclick = async () => {
   await PWQ.ready();
   if (!PWQ.currentUser()) { PWQ.toast("请先去登录页登录，登录后才能把题存到云端。"); location.href = "index.html"; return; }
-  const q = { subject: document.getElementById("subject").value,
-    qkind: document.getElementById("qkind").value,
-    type: document.getElementById("type").value,
-    stem: document.getElementById("stem").value,
-    options: document.getElementById("options").value.split("\n").filter(Boolean),
-    answer: document.getElementById("answer").value,
-    explain: "",
-    reason: document.getElementById("reason").value,
-    batch: document.getElementById("batch").value || "未分组",
-    starred:false, mastered:false, streak:0, edited:false, note:"" };
-  q.explain = await PWQ.explainPlaceholder({stem: q.stem, options: q.options, answer: q.answer, type: q.type});
-  try {
-    await PWQ.addQuestion(q);
-    PWQ.toast("已保存到云端错题库。");
-    location.href = "bank.html";
-  } catch(e) { PWQ.toast(String(e.message || e)); }
+  const batch = document.getElementById("batch").value || "未分组";
+  const divs = document.querySelectorAll("#proofList .qitem");
+  if (!divs.length) { PWQ.toast("还没有识别出题目，请先点识别。"); return; }
+  for (const div of divs) {
+    const q = { subject: div.querySelector("[data-f='subject']").value,
+      qkind: div.querySelector("[data-f='qkind']").value,
+      type: div.querySelector("[data-f='type']").value,
+      stem: div.querySelector("[data-f='stem']").value,
+      options: div.querySelector("[data-f='options']").value.split("\n").filter(Boolean),
+      answer: div.querySelector("[data-f='answer']").value,
+      explain: "",
+      reason: div.querySelector("[data-f='reason']").value,
+      batch: batch,
+      starred:false, mastered:false, streak:0, edited:false, note:"" };
+    q.explain = await PWQ.explainPlaceholder({stem: q.stem, options: q.options, answer: q.answer, type: q.type});
+    div.querySelector("[data-f='explainText']").textContent = q.explain;
+    div.querySelector(".explain").classList.remove("hidden");
+    try { await PWQ.addQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); return; }
+  }
+  PWQ.toast("已全部保存到云端错题库。");
+  location.href = "bank.html";
 };
 // 点开这一页就直接是全屏相机，不用再点一次拍照按钮。
 startCamera();

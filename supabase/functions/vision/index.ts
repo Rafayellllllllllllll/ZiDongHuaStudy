@@ -29,7 +29,7 @@ A. ……
 B. ……
 C. ……
 D. ……
-如果这道题没有选项（判断题或主观题），选项那行就写“无选项”，并在题干后注明是判断题还是主观题。
+正确答案：X（只写一个字母，A/B/C/D；如果这道题没有选项（判断题或主观题），就写判断题的对/错，或主观题的参考答案简述，不要猜选项）
 如果照片看不清、读不出来，就只输出“读不出来”四个字，不要猜。`;
     const res = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
@@ -61,7 +61,9 @@ D. ……
     while ((m = optRe.exec(text)) !== null) {
       options.push(m[1] + ". " + m[2].trim());
     }
-    return new Response(JSON.stringify({ stem, options, raw: text }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const ansMatch = text.match(/正确答案[：:]\s*([A-D])/);
+    const suggested_answer = ansMatch ? ansMatch[1] : "";
+    return new Response(JSON.stringify({ stem, options, suggested_answer, raw: text }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
