@@ -18,14 +18,14 @@
 <main class="zyb-page zyb-full">
 <input type="file" accept="image/*" capture="environment" id="camera" class="hidden">
 <div class="zyb-stage-wrap"><div class="zyb-stage" id="stage"><p style="padding:20px;line-height:1.6">还没选照片。拍完或从相册选完后，照片会在这里按原宽高比满宽显示，不裁剪、不拉伸。</p></div></div>
+<p style="margin:0;padding:8px 16px 0"><button type="button" class="secondary" id="addBox" style="margin-top:0">手动补框：在照片上拖一下，框出没框住的题</button>
+<button type="button" class="secondary" id="retakeBtn2" style="margin-top:0">重新拍摄</button>
+<button type="button" id="recognize" style="margin-top:0">识别所选题目</button></p>
 <p class="zyb-hint" id="ocrNote">点框是选 / 取消选；按住框身拖动可以移动框；按住框右下角圆点可以调宽和高。框不准先别急着保存，先调好框。</p>
-<p><button type="button" class="secondary" id="addBox">手动补框：在照片上拖一下，框出没框住的题</button>
-<button type="button" class="secondary" id="retakeBtn2">重新拍摄</button>
-<button type="button" id="recognize">识别所选题目</button></p>
 <p class="zyb-hint">这是真实识别：点“识别”会把每个选中框裁出来发给能看图的 DeepSeek 模型读题干、选项和正确答案，照片只临时发给模型看一次，不存云端。下面解析面板里的题目、答案、步骤如果还没识别出来，会先显示“正在识别…”，不会用假题目冒充真实识别。</p>
 <div style="height:96px"></div>
 </main>
-<div class="zyb-bar" id="zybBar"><span class="zyb-count" id="zybCount">已选 0 道</span><button type="button" class="secondary" id="zybSelectBtn">选择题目</button><button type="button" id="zybRecordBtn">记录错题</button></div>
+<div class="zyb-bar" id="zybBar"><span class="zyb-count" id="zybCount">已选 0 道</span><button type="button" id="zybRecordBtn">记录错题</button></div>
 <div class="zyb-backdrop" id="zybBackdrop"></div>
 <section class="zyb-sheet" id="zybSheet" aria-label="题目解析面板">
 <div class="zyb-grab" id="zybGrab"></div>
@@ -340,12 +340,6 @@ document.getElementById("recognize").onclick = async () => {
   renderSheet();
   openSheet("open");
   PWQ.toast("识别完成，共 " + cards.length + " 道题，解析面板顶部点编号可以切换题目，点选项可以改正确答案。");
-};
-document.getElementById("zybSelectBtn").onclick = () => {
-  const sel = boxes.filter(b => b.selected);
-  if (!sel.length) { PWQ.toast("请先在照片上点框选题目，选中的框会变绿并标上顺序编号。"); return; }
-  PWQ.toast("已选 " + sel.length + " 道题，再点“记录错题”会打开解析面板，点顶部编号可以切换题目。");
-  document.getElementById("stage").scrollIntoView({behavior:"smooth"});
 };
 document.getElementById("zybRecordBtn").onclick = () => {
   if (sheetCards.length) { renderSheet(); openSheet("open"); return; }
