@@ -234,7 +234,7 @@ document.getElementById("recognize").onclick = async () => {
   const cards = [];
   for (let bi = 0; bi < targets.length; bi++) {
     const box = targets[bi];
-    let stem = "", options = [], suggested = "";
+    let stem = "", options = [], suggested = "", subject = "其他";
     try {
       const canvas = document.createElement("canvas");
       const iw = img.naturalWidth, ih = img.naturalHeight;
@@ -249,9 +249,9 @@ document.getElementById("recognize").onclick = async () => {
         body: JSON.stringify({ image: cropDataUrl }),
       });
       const data = await res.json();
-      stem = data.stem || ""; options = data.options || []; suggested = data.suggested_answer || "";
+      stem = data.stem || ""; options = data.options || []; suggested = data.suggested_answer || ""; subject = data.subject || "其他";
     } catch(e) { stem = ""; options = []; suggested = ""; }
-    cards.push({ stem, options, answer: suggested, subject: "数学", qkind: "选择题", type: "定量计算类", reason: "概念不清" });
+    cards.push({ stem, options, answer: suggested, subject: subject, qkind: "选择题", type: "定量计算类", reason: "概念不清" });
   }
   const list = document.getElementById("proofList");
   list.innerHTML = "";
