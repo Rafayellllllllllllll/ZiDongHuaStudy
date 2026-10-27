@@ -16,7 +16,7 @@ header{position:sticky;top:0;background:var(--white);border-bottom:3px solid var
 header .logo{font-weight:900;font-size:20px}
 header .logo span{color:var(--pink-hot)}
 nav a{margin-right:10px;text-decoration:none;font-weight:700}
-main{max-width:900px;margin:0 auto;padding:20px 16px 60px}
+main{max-width:900px;margin:0 auto;padding:8px 16px 90px}
 .card{background:var(--white);border:3px solid var(--line);border-radius:20px;
   padding:18px;margin:16px 0;box-shadow:5px 5px 0 var(--pink)}
 .card.mint{box-shadow:5px 5px 0 var(--mint)}
