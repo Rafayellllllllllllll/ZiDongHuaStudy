@@ -31,6 +31,8 @@ C. ……
 D. ……
 正确答案：X（只写一个字母，A/B/C/D；如果这道题没有选项（判断题或主观题），就写判断题的对/错，或主观题的参考答案简述，不要猜选项）
 学科：X（只写一个词，从下面选一个最贴切的：语文、数学、政治、物理、计算机、其他；集合、函数、几何、代数是数学，古诗、阅读、作文是语文，法律、时政是政治，力学、电学是物理，编程、AI、硬件是计算机）
+大题型：X（只写一个词：选择题、判断题、主观题；有 A/B/C/D 选项就是选择题，只有对/错就是判断题，没有选项要写过程的就是主观题）
+解析类型：X（只写一个词：定量计算类、定性辨析类；要算数、算步骤的就是定量计算类，要辨析概念、对错原因的就是定性辨析类）
 如果照片看不清、读不出来，就只输出“读不出来”四个字，不要猜。`;
     const res = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
@@ -64,6 +66,10 @@ D. ……
     }
     const ansMatch = text.match(/正确答案[：:]\s*([A-D])/);
     const suggested_answer = ansMatch ? ansMatch[1] : "";
+    const qkindMatch = text.match(/大题型[：:]\s*(选择题|判断题|主观题)/);
+    const qkind = qkindMatch ? qkindMatch[1] : (options.length ? "选择题" : "主观题");
+    const typeMatch = text.match(/解析类型[：:]\s*(定量计算类|定性辨析类)/);
+    const explain_type = typeMatch ? typeMatch[1] : "定性辨析类";
     const subjMatch = text.match(/学科[：:]\s*(语文|数学|政治|物理|计算机|其他)/);
     let subject = subjMatch ? subjMatch[1] : "其他";
     // 兜底关键词：如果模型没给学科，按题干关键词再判一次，避免默认语文。
@@ -74,7 +80,7 @@ D. ……
       else if (/力学|电学|光学|力学|电流|电压|电阻/.test(stem)) subject = "物理";
       else if (/编程|算法|AI|人工智能|硬件|CPU|内存/.test(stem)) subject = "计算机";
     }
-    return new Response(JSON.stringify({ stem, options, suggested_answer, subject, raw: text }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ stem, options, suggested_answer, subject, qkind, explain_type, raw: text }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

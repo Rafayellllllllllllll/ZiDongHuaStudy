@@ -233,7 +233,7 @@ document.getElementById("recognize").onclick = async () => {
   const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
   const anon = window.APP_CONFIG ? window.APP_CONFIG.SUPABASE_ANON_KEY : "";
   const cards = await Promise.all(targets.map(async (box) => {
-    let stem = "", options = [], suggested = "", subject = "其他";
+    let stem = "", options = [], suggested = "", subject = "其他", qkind = "选择题", explain_type = "定性辨析类";
     try {
       const canvas = document.createElement("canvas");
       const iw = img.naturalWidth, ih = img.naturalHeight;
@@ -248,9 +248,9 @@ document.getElementById("recognize").onclick = async () => {
         body: JSON.stringify({ image: cropDataUrl }),
       });
       const data = await res.json();
-      stem = data.stem || ""; options = data.options || []; suggested = data.suggested_answer || ""; subject = data.subject || "其他";
+      stem = data.stem || ""; options = data.options || []; suggested = data.suggested_answer || ""; subject = data.subject || "其他"; qkind = data.qkind || "选择题"; explain_type = data.explain_type || "定性辨析类";
     } catch(e) { stem = ""; options = []; suggested = ""; subject = "其他"; }
-    return { stem, options, answer: suggested, subject, qkind: "选择题", type: "定量计算类", reason: "概念不清" };
+    return { stem, options, answer: suggested, subject, qkind, type: explain_type, reason: "概念不清" };
   }));
   const list = document.getElementById("proofList");
   list.innerHTML = "";
