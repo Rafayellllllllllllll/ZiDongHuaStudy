@@ -127,3 +127,11 @@ main.zyb-full .zyb-stage{width:100%}
 main.zyb-full .zyb-stage img{width:100%;height:auto;display:block}
 main.zyb-full .zyb-hint, main.zyb-full p:not(.zyb-hint){padding-left:16px;padding-right:16px}
 main.zyb-full p button{margin-left:16px}
+
+/* 错题统计柱状图：纯 CSS，不引第三方库，手机上不横向溢出，纵坐标从 0 开始 */
+#chart{display:flex;gap:8px;align-items:flex-end;overflow-x:auto;padding:12px 4px 4px}
+.stat-bar{flex:1 0 44px;min-width:44px;text-align:center}
+.stat-count{font-weight:800;font-size:14px;margin-bottom:4px}
+.stat-col{height:140px;display:flex;align-items:flex-end;justify-content:center}
+.stat-fill{width:28px;background:var(--primary);border-radius:8px 8px 0 0}
+.stat-label{font-size:12px;color:var(--muted);margin-top:6px;word-break:break-all}

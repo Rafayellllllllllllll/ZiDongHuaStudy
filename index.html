@@ -8,7 +8,7 @@
 <div class="card"><h1>第一次使用，先注册登录</h1>
 <p>每个人用自己的账号登录，各人数据独立，互相看不到。分享给朋友时，把网站链接发给朋友，朋友自己注册自己的账号。</p>
 <p class="small">一个设备上登录一次后保持登录，之后再打开不用再填；只有主动退出或清浏览器数据，才需要重新填。数据存在云端，换设备登录同一个账号，错题和笔记本都在。</p>
-<p id="who" class="small"></p>
+<p id="who" class="small"></p><div id="profileBox" class="hidden"><p><b>我的账号</b></p><p id="profileText" class="small"></p><p><button type="button" class="secondary" id="profileLogoutBtn">退出登录</button> <button type="button" class="secondary" id="profileLogoutAllBtn">退出所有设备</button></p><p class="small">退出后才会重新出现登录界面。</p></div>
 <form id="f">
 <label>账号（用户名）</label><input id="username" required placeholder="例如：你的账号名">
 <label>密码</label><input id="password" type="password" required placeholder="不要在聊天里发密码，密码只在这里填">
@@ -32,6 +32,10 @@
   if (u) {
     document.getElementById("who").textContent = "当前已登录：" + u.username + (u.role === "admin" ? "（管理员）" : "");
     document.getElementById("username").value = u.username;
+    document.getElementById("f").classList.add("hidden");
+    const pb = document.getElementById("profileBox");
+    pb.classList.remove("hidden");
+    document.getElementById("profileText").textContent = "头像：" + (u.username || "").slice(0,1) + " · 名字：" + u.username + " · 邮箱：" + (u.email || "未填");
   } else {
     document.getElementById("who").textContent = "当前未登录，请填账号和密码。";
   }
@@ -54,6 +58,8 @@ document.getElementById("logoutBtn").onclick = async () => {
   PWQ.toast("已退出本机登录。");
   location.reload();
 };
+document.getElementById("profileLogoutBtn").onclick = async () => { await PWQ.signOut(); location.reload(); };
+document.getElementById("profileLogoutAllBtn").onclick = async () => { if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return; await PWQ.signOutAll(); location.reload(); };
 document.getElementById("logoutAllBtn").onclick = async () => {
   if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return;
   await PWQ.signOutAll();

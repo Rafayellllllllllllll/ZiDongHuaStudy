@@ -1,0 +1,189 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 错题统计</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script></head><body>
+<main>
+<div class="card"><h1>错题统计</h1>
+<p class="small">根据云端错题库真实数据统计，新增、删除、编辑后重新打开或点刷新就会同步更新。同一道题只算一次，编辑不改创建时间就不会重复计数。</p>
+<div id="loading" class="warn">正在加载统计数据…</div>
+<div id="error" class="warn hidden"></div>
+<div id="content" class="hidden">
+<label>统计日期</label>
+<div>
+<button type="button" class="pill rangeBtn" data-range="today">今天</button>
+<button type="button" class="pill rangeBtn" data-range="7">近7天</button>
+<button type="button" class="pill rangeBtn" data-range="30">近30天</button>
+<button type="button" class="pill rangeBtn" data-range="custom">自定义</button>
+</div>
+<div id="customBox" class="hidden">
+<label>开始日期</label><input type="date" id="startDate">
+<label>结束日期</label><input type="date" id="endDate">
+<button type="button" class="secondary" id="applyCustom">按这个范围统计</button>
+</div>
+<p id="rangeText" class="small"></p>
+<p id="totalText"><b></b></p>
+<div>
+<button type="button" class="pill viewBtn" data-view="subject">按学科统计</button>
+<button type="button" class="pill viewBtn" data-view="date">按日期统计</button>
+</div>
+<div id="chart"></div>
+<div id="detail"></div>
+<p><button type="button" class="secondary" id="refreshBtn">刷新统计</button>
+<a class="btn ghost" href="bank.html">去错题本</a></p>
+</div>
+</div>
+</main>
+<nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html" class="active">统计</a><a href="index.html?account=1">我的</a></nav>
+<script>
+const SUBJECTS = ["语文","数学","英语","物理","化学","生物","政治","历史","地理","计算机","其他"];
+let allQs = [];
+let range = "7";
+let customStart = "", customEnd = "";
+let view = "subject";
+let selectedKey = "";
+function toCSTDate(iso){
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const cst = new Date(d.getTime() + 8*60*60*1000);
+  return cst.toISOString().slice(0,10);
+}
+function todayCST(){
+  const now = new Date(Date.now() + 8*60*60*1000);
+  return now.toISOString().slice(0,10);
+}
+function addDays(dateStr, n){
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0,10);
+}
+function dateList(start, end){
+  const list = [];
+  let cur = start;
+  while (cur <= end) { list.push(cur); cur = addDays(cur, 1); if (list.length > 370) break; }
+  return list;
+}
+function getRange(){
+  const today = todayCST();
+  if (range === "today") return {start: today, end: today};
+  if (range === "7") return {start: addDays(today, -6), end: today};
+  if (range === "30") return {start: addDays(today, -29), end: today};
+  if (range === "custom" && customStart && customEnd) {
+    return customStart <= customEnd ? {start: customStart, end: customEnd} : {start: customEnd, end: customStart};
+  }
+  return {start: addDays(today, -6), end: today};
+}
+function filtered(){
+  const r = getRange();
+  const seen = new Set();
+  return allQs.filter(q => {
+    if (!q.id || seen.has(String(q.id))) return false;
+    seen.add(String(q.id));
+    const d = toCSTDate(q.created_at);
+    if (!d) return false;
+    return d >= r.start && d <= r.end;
+  });
+}
+function render(){
+  const r = getRange();
+  document.getElementById("rangeText").textContent = "统计范围：" + r.start + " 至 " + r.end + "（按北京时间创建日期算）";
+  document.querySelectorAll(".rangeBtn").forEach(b => b.classList.toggle("active", b.dataset.range === range));
+  document.querySelectorAll(".viewBtn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  document.getElementById("customBox").classList.toggle("hidden", range !== "custom");
+  const qs = filtered();
+  document.querySelector("#totalText b").textContent = "这个范围内共 " + qs.length + " 道错题";
+  const chart = document.getElementById("chart");
+  const detail = document.getElementById("detail");
+  if (!allQs.length) {
+    chart.innerHTML = "<p>还没有错题，添加第一道错题后即可查看统计。</p>";
+    detail.innerHTML = "";
+    return;
+  }
+  if (!qs.length) {
+    chart.innerHTML = "<p>这个日期范围内还没有错题，换个范围试试。</p>";
+    detail.innerHTML = "";
+    return;
+  }
+  let bars = [];
+  if (view === "subject") {
+    bars = SUBJECTS.map(s => ({key: s, label: s, count: qs.filter(q => (q.subject || "其他") === s).length}));
+    // 不在固定列表里的学科也显示，不丢数据
+    const extra = [...new Set(qs.map(q => q.subject || "其他"))].filter(s => !SUBJECTS.includes(s));
+    extra.forEach(s => bars.push({key: s, label: s, count: qs.filter(q => (q.subject || "其他") === s).length}));
+  } else {
+    bars = dateList(r.start, r.end).map(d => ({key: d, label: d.slice(5), count: qs.filter(q => toCSTDate(q.created_at) === d).length}));
+  }
+  const max = Math.max(1, ...bars.map(b => b.count));
+  chart.innerHTML = "<p class='small'>纵坐标从 0 开始，最高 " + max + " 道。点柱子可以看对应错题。</p>" +
+    bars.map(b => {
+      const h = Math.round(b.count / max * 140);
+      return "<div class='stat-bar' data-key='" + PWQ.escapeHtml(b.key) + "' style='cursor:pointer'>" +
+        "<div class='stat-count'>" + b.count + "</div>" +
+        "<div class='stat-col'><div class='stat-fill' style='height:" + h + "px'></div></div>" +
+        "<div class='stat-label'>" + PWQ.escapeHtml(b.label) + "</div></div>";
+    }).join("");
+  chart.querySelectorAll(".stat-bar").forEach(el => {
+    el.onclick = () => { selectedKey = el.dataset.key; renderDetail(); };
+  });
+  renderDetail();
+}
+function renderDetail(){
+  const detail = document.getElementById("detail");
+  if (!selectedKey) { detail.innerHTML = "<p class='small'>点上面任意一根柱子，这里会列出对应的错题。</p>"; return; }
+  const qs = filtered();
+  let list = [];
+  let title = "";
+  if (view === "subject") {
+    list = qs.filter(q => (q.subject || "其他") === selectedKey);
+    title = selectedKey + "：共 " + list.length + " 道";
+  } else {
+    list = qs.filter(q => toCSTDate(q.created_at) === selectedKey);
+    title = selectedKey + "：共 " + list.length + " 道";
+  }
+  if (!list.length) { detail.innerHTML = "<p>" + PWQ.escapeHtml(title) + "，这个范围内没有错题。</p>"; return; }
+  detail.innerHTML = "<h2>" + PWQ.escapeHtml(title) + "</h2>" +
+    list.map(q => "<div class='qitem'><p><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span><span class='tag'>" + PWQ.escapeHtml(toCSTDate(q.created_at)) + "</span></p><p><b>" + PWQ.escapeHtml(q.stem) + "</b></p><p>正确答案：" + PWQ.escapeHtml(q.answer) + "</p><p><a class='btn secondary' href='bank.html'>去错题本看详情</a></p></div>").join("");
+}
+async function load(){
+  document.getElementById("loading").classList.remove("hidden");
+  document.getElementById("error").classList.add("hidden");
+  document.getElementById("content").classList.add("hidden");
+  try {
+    await PWQ.ready();
+    if (!PWQ.currentUser()) {
+      document.getElementById("loading").classList.add("hidden");
+      document.getElementById("error").textContent = "请先去登录页登录，登录后这里才会显示你在云端的错题统计。";
+      document.getElementById("error").classList.remove("hidden");
+      return;
+    }
+    allQs = PWQ.getQuestions();
+    selectedKey = "";
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+    render();
+  } catch(e) {
+    document.getElementById("loading").classList.add("hidden");
+    const err = document.getElementById("error");
+    err.innerHTML = "数据加载失败：" + PWQ.escapeHtml(String(e.message || e)) + " <button type='button' class='secondary' onclick='load()'>重试</button>";
+    err.classList.remove("hidden");
+  }
+}
+document.querySelectorAll(".rangeBtn").forEach(b => {
+  b.onclick = () => { range = b.dataset.range; selectedKey = ""; if (range !== "custom") render(); else render(); };
+});
+document.querySelectorAll(".viewBtn").forEach(b => {
+  b.onclick = () => { view = b.dataset.view; selectedKey = ""; render(); };
+});
+document.getElementById("applyCustom").onclick = () => {
+  customStart = document.getElementById("startDate").value;
+  customEnd = document.getElementById("endDate").value;
+  if (!customStart || !customEnd) { PWQ.toast("请先选开始日期和结束日期。"); return; }
+  selectedKey = "";
+  render();
+};
+document.getElementById("refreshBtn").onclick = () => { load(); };
+load();
+</script>
+</body></html>
