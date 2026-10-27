@@ -10,8 +10,11 @@
 <div class="card"><h1>易错题</h1>
 <p>错题库里点星星收藏的、特别薄弱、容易错的题都在这里，和笔记本并列、互不干扰。</p>
 <div id="list"></div></div>
-</main><footer>本地骨架</footer>
+</main><footer>云端版</footer>
 <script>
+(async () => {
+await PWQ.ready();
+if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录。</p>"; return; }
 const qs = PWQ.getQuestions().filter(q => q.starred);
 const list = document.getElementById("list");
 if (!qs.length) list.innerHTML = "<p>还没收藏。去错题库点星星，特别薄弱的题就会到这里。</p>";
@@ -24,4 +27,5 @@ qs.forEach(q => {
     "<p>" + PWQ.escapeHtml(q.explain) + "</p>";
   list.appendChild(d);
 });
+})();
 </script></body></html>

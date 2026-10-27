@@ -9,34 +9,55 @@
 <main>
 <div class="card"><h1>第一次使用，先注册登录</h1>
 <p>每个人用自己的账号登录，各人数据独立，互相看不到。分享给朋友时，把网站链接发给朋友，朋友自己注册自己的账号。</p>
-<p class="small">一个设备上登录一次后保持登录，之后再打开不用再填；只有主动退出或清浏览器数据，才需要重新填。</p>
+<p class="small">一个设备上登录一次后保持登录，之后再打开不用再填；只有主动退出或清浏览器数据，才需要重新填。数据存在云端，换设备登录同一个账号，错题和笔记本都在。</p>
+<p id="who" class="small"></p>
 <form id="f">
 <label>账号（用户名）</label><input id="username" required placeholder="例如：你的账号名">
 <label>密码</label><input id="password" type="password" required placeholder="不要在聊天里发密码，密码只在这里填">
-<label>邮箱（选填）</label><input id="email" type="email" placeholder="选填：填了才能用邮箱找回密码，不填则没有邮箱找回途径">
+<label>邮箱（选填）</label><input id="email" type="email" placeholder="选填：填了记在账号里，不填也能注册登录">
 <button type="submit">注册 / 登录</button>
-<button type="button" class="secondary" onclick="logout()">退出登录</button>
+<button type="button" class="secondary" id="logoutBtn">退出登录</button>
+<button type="button" class="secondary" id="logoutAllBtn">退出所有设备</button>
 </form>
-<p class="small">骨架说明：真实注册登录以后应走 Supabase Auth；当前未配置时，本页只把账号存在本机浏览器做演示。忘记密码找回、退出所有设备在骨架里是占位入口，见各页面注释。</p>
+<p class="small">注册说明：账号不存在时点这个按钮就是注册，账号已存在时点这个按钮就是登录，密码错了会提示，不会覆盖原来的账号。管理员账号是 Rafayellllllllllllll，注册成功后由后台标成管理员，朋友默认普通用户。</p>
 </div>
 <div class="card mint"><h2>登录后可以去</h2>
 <p><a class="btn" href="upload.html">去录错题</a><a class="btn secondary" href="bank.html">去错题库</a><a class="btn ghost" href="practice.html">去练习</a></p>
-<p class="small">管理员：事先标定的主人账号登录后才能在“管理”页看到谁登录、什么时候用、用了多长时间；朋友默认普通用户，看不到管理后台。</p></div>
-</main><footer>本地骨架 · 未部署 · 未接通 Supabase / DeepSeek</footer>
+<p class="small">管理员：事先标定的主人账号登录后才能在“管理”页看到谁登录、什么时候用；朋友默认普通用户，看不到管理后台，管理员也看不到朋友的错题内容。</p></div>
+</main><footer>云端版 · 数据存在 Supabase，解析走 DeepSeek</footer>
 <script>
-document.getElementById("f").addEventListener("submit", e => {
+(async () => {
+  await PWQ.ready();
+  const u = PWQ.currentUser();
+  if (u) {
+    document.getElementById("who").textContent = "当前已登录：" + u.username + (u.role === "admin" ? "（管理员）" : "");
+    document.getElementById("username").value = u.username;
+  } else {
+    document.getElementById("who").textContent = "当前未登录，请填账号和密码。";
+  }
+})();
+document.getElementById("f").addEventListener("submit", async e => {
   e.preventDefault();
-  const u = { username: document.getElementById("username").value.trim(),
-              email: document.getElementById("email").value.trim() };
-  if (!u.username) return;
-  PWQ.save("pwq_user", u);
-  // TODO(后端)：记录一次登录（登录时间、设备），供管理员页统计用时。
-  PWQ.toast("骨架演示：已在本机记住登录状态（未接通真实后端）。");
-  location.href = "upload.html";
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+  const email = document.getElementById("email").value.trim();
+  try {
+    await PWQ.signInOrUp(username, password, email);
+    PWQ.toast("已登录，数据在云端，换设备登录同一个账号也能看到。");
+    location.href = "upload.html";
+  } catch (err) {
+    PWQ.toast(String(err.message || err));
+  }
 });
-function logout(){
-  localStorage.removeItem("pwq_user");
-  PWQ.toast("骨架演示：已退出本机登录。真实“退出所有设备”需后端实现，见 README。");
+document.getElementById("logoutBtn").onclick = async () => {
+  await PWQ.signOut();
+  PWQ.toast("已退出本机登录。");
   location.reload();
-}
+};
+document.getElementById("logoutAllBtn").onclick = async () => {
+  if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return;
+  await PWQ.signOutAll();
+  PWQ.toast("已退出所有设备。");
+  location.reload();
+};
 </script></body></html>

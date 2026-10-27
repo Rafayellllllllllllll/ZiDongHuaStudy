@@ -13,31 +13,34 @@
 <label>颜色</label><select id="color"><option value="black">黑色（默认）</option><option value="red">红色</option><option value="blue">蓝色</option></select>
 <button type="submit">加一条</button></form>
 <div id="list"></div></div>
-</main><footer>本地骨架 · 笔记本只存本机（未接通后端）</footer>
+</main><footer>云端版 · 笔记本存在 Supabase</footer>
 <script>
-function getNotes(){ try { return JSON.parse(localStorage.getItem("pwq_notes") || "[]"); } catch(e) { return []; } }
-function saveNotes(n){ localStorage.setItem("pwq_notes", JSON.stringify(n)); }
-function render(){
-  const notes = getNotes(); const list = document.getElementById("list"); list.innerHTML = "";
+async function render(){
+  await PWQ.ready();
+  if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录，登录后笔记本才能存到云端。</p>"; return; }
+  const notes = PWQ.getNotes(); const list = document.getElementById("list"); list.innerHTML = "";
   if (!notes.length) list.innerHTML = "<p>还没有知识点，上面粘贴一条试试。</p>";
-  notes.forEach((n, i) => {
+  notes.forEach((n) => {
     const d = document.createElement("div"); d.className = "qitem";
     const sel = document.createElement("select");
     [["black","黑色"],["red","红色"],["blue","蓝色"]].forEach(([v, label]) => {
       const o = document.createElement("option"); o.value = v; o.textContent = label; if (n.color === v) o.selected = true; sel.appendChild(o);
     });
-    sel.onchange = () => { notes[i].color = sel.value; saveNotes(notes); render(); };
-    const p = document.createElement("p"); p.textContent = n.text; p.style.color = n.color || "black";
+    sel.onchange = async () => { try { await PWQ.updateNote(n.id, sel.value); } catch(e) { PWQ.toast(String(e.message || e)); } render(); };
+    const pp = document.createElement("p"); pp.textContent = n.text; pp.style.color = n.color || "black";
     const del = document.createElement("button"); del.className = "ghost"; del.textContent = "删除";
-    del.onclick = () => { notes.splice(i, 1); saveNotes(notes); render(); };
-    d.append(p, sel, del); list.appendChild(d);
+    del.onclick = async () => { await PWQ.deleteNote(n.id); render(); };
+    d.append(pp, sel, del); list.appendChild(d);
   });
 }
-document.getElementById("f").addEventListener("submit", e => {
+document.getElementById("f").addEventListener("submit", async e => {
   e.preventDefault();
-  const notes = getNotes();
-  notes.push({ text: document.getElementById("text").value.trim(), color: document.getElementById("color").value });
-  saveNotes(notes); document.getElementById("text").value = ""; render();
+  await PWQ.ready();
+  if (!PWQ.currentUser()) { PWQ.toast("请先登录。"); location.href = "index.html"; return; }
+  try {
+    await PWQ.addNote(document.getElementById("text").value.trim(), document.getElementById("color").value);
+    document.getElementById("text").value = ""; render();
+  } catch(err) { PWQ.toast(String(err.message || err)); }
 });
 render();
 </script></body></html>

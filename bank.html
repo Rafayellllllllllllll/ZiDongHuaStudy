@@ -8,7 +8,7 @@
 <nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
 <main>
 <div class="card"><h1>错题库</h1>
-<p>按学科自动分类，学科分错可手动改。已经会了的题仍在这里可见，并格外标出。</p>
+<p>按学科自动分类，学科分错可手动改。已经会了的题仍在这里可见，并格外标出。数据在云端，换设备登录同一个账号也能看到。</p>
 <label>按学科筛选</label><select id="filter"><option value="">全部</option><option>语文</option><option>数学</option><option>政治</option><option>物理</option><option>计算机</option><option>其他</option></select>
 <label><input type="checkbox" id="onlyStar" style="width:auto"> 只看星标题</label>
 <label><input type="checkbox" id="onlyMastered" style="width:auto"> 只看已经会了的题</label>
@@ -16,10 +16,12 @@
 <div id="list"></div>
 <p><button class="secondary" onclick="window.print()">导出打印（浏览器打印）</button>
 <a class="btn ghost" href="practice.html">去练习</a></p>
-<p class="small">真实导出（PDF / 打印卷）与薄弱统计应以后端数据为准；骨架里按本机演示数据统计。</p></div>
-</main><footer>本地骨架 · 未接通 Supabase</footer>
+<p class="small">薄弱统计按云端数据统计。</p></div>
+</main><footer>云端版 · 数据存在 Supabase</footer>
 <script>
-function render(){
+async function render(){
+  await PWQ.ready();
+  if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录，登录后这里才会显示你在云端的错题。</p>"; return; }
   const qs = PWQ.getQuestions();
   const f = document.getElementById("filter").value;
   const onlyStar = document.getElementById("onlyStar").checked;
@@ -29,7 +31,7 @@ function render(){
   const reasons = {};
   qs.forEach(q => reasons[q.reason] = (reasons[q.reason] || 0) + 1);
   document.getElementById("stats").innerHTML =
-    "<p>薄弱统计（骨架演示）：按学科 " + JSON.stringify(counts) +
+    "<p>薄弱统计：按学科 " + JSON.stringify(counts) +
     "；按错因 " + JSON.stringify(reasons) + "</p>";
   const list = document.getElementById("list");
   list.innerHTML = "";
@@ -49,16 +51,15 @@ function render(){
         "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
         "<p>" + q.options.map(o => PWQ.escapeHtml(o)).join("<br>") + "</p>" +
         "<p>正确答案：" + PWQ.escapeHtml(q.answer) + "（练习时答前不显示，答完才显示）</p>" +
-        "<p>解析：" + PWQ.escapeHtml(q.explain) + "</p>" +
-
+        "<p>解析：" + PWQ.escapeHtml(q.explain) + "</p>";
       const star = document.createElement("button");
       star.textContent = q.starred ? "取消星星" : "点星星收藏到易错题";
-      star.onclick = () => { q.starred = !q.starred; PWQ.saveQuestions(qs); render(); };
+      star.onclick = async () => { q.starred = !q.starred; try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); } render(); };
       const edit = document.createElement("button");
       edit.className = "secondary"; edit.textContent = "改解析 / 改题干";
-      edit.onclick = () => {
+      edit.onclick = async () => {
         const ne = prompt("改解析（改过的会标手动改过、不锁定，还能再改）：", q.explain);
-        if (ne !== null) { q.explain = ne; q.edited = true; PWQ.saveQuestions(qs); render(); }
+        if (ne !== null) { q.explain = ne; q.edited = true; try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); } render(); }
       };
       const copy = document.createElement("button");
       copy.className = "ghost"; copy.textContent = "一键复制解析";
@@ -66,7 +67,13 @@ function render(){
         try { await navigator.clipboard.writeText(q.explain); PWQ.toast("已复制解析。"); }
         catch(e){ PWQ.toast("复制失败，请手动长按复制解析文字。"); }
       };
-      d.append(star, edit, copy, subj, del);
+      const del = document.createElement("button");
+      del.className = "ghost"; del.textContent = "删除这道题";
+      del.onclick = async () => {
+        if (!confirm("确定删除这道题吗？云端也会删掉。")) return;
+        await PWQ.deleteQuestion(q.id); render();
+      };
+      d.append(star, edit, copy, del);
       list.appendChild(d);
     });
   if (!list.children.length) list.innerHTML = "<p>这里还没有符合条件的题。先去录错题。</p>";

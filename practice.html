@@ -15,10 +15,12 @@
 <button class="secondary" id="review">已掌握复查（隔一段时间抽查，骨架占位）</button></p>
 <p class="small">如果剩下未掌握的题不够你选的数，就按剩下的来。已经会了的题隔一段时间再抽查，抽查错了回到未掌握；按知识点生成同类题以后由 DeepSeek 生成，骨架里是占位按钮。</p>
 <div id="area"></div></div>
-</main><footer>本地骨架 · 练习计数只存本机</footer>
+</main><footer>云端版 · 练习计数存在 Supabase</footer>
 <script>
 let pool = [], idx = 0;
-function start(){
+async function start(){
+  await PWQ.ready();
+  if (!PWQ.currentUser()) { document.getElementById("area").innerHTML = "<p>请先去登录页登录，登录后才能练习云端的题。</p>"; return; }
   const all = PWQ.getQuestions().filter(q => !q.mastered);
   // 随机打乱：不按原来顺序。
   pool = all.sort(() => Math.random() - 0.5)
@@ -37,7 +39,7 @@ function show(){
     "<p class='small'>答的时候先不显示答案和解析。</p>" +
     "<p><label>你的答案</label><select id='ans'><option>A</option><option>B</option><option>C</option><option>D</option></select></p>" +
     "<button id='submit'>提交答案</button><div id='result'></div></div>";
-  document.getElementById("submit").onclick = () => {
+  document.getElementById("submit").onclick = async () => {
     const ans = document.getElementById("ans").value;
     const ok = ans === q.answer;
     const qs = PWQ.getQuestions();
@@ -45,7 +47,7 @@ function show(){
     if (ok) { target.streak = (target.streak || 0) + 1;
       if (target.streak >= 3) target.mastered = true;
     } else { target.streak = 0; }
-    PWQ.saveQuestions(qs);
+    try { await PWQ.updateQuestion(target); } catch(e) { PWQ.toast(String(e.message || e)); }
     document.getElementById("result").innerHTML =
       "<p>" + (ok ? "答对了。" : "答错了，计数清零，这道题重新回到练习里。") +
       " 正确答案：" + PWQ.escapeHtml(q.answer) +

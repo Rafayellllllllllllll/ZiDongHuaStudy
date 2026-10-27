@@ -40,7 +40,7 @@ D. 示例选项四</textarea>
 <p><button id="saveQ">确认无误，保存到错题库</button></p>
 <p class="small">重复上传提醒、学科自动分类、真实 OCR 框选、真实 DeepSeek 解析均为待接通的占位，见 README。</p>
 </div></div>
-</main><footer>本地骨架 · 照片不上传、不存储</footer>
+</main><footer>云端版 · 照片不上传、不存储，保存的文字存在 Supabase</footer>
 <script>
 let boxes = [];
 const stage = document.getElementById("stage");
@@ -89,20 +89,23 @@ document.getElementById("recognize").onclick = () => {
   document.getElementById("proof").classList.toggle("hidden", !unclear);
 };
 document.getElementById("saveQ").onclick = async () => {
-  const qs = PWQ.getQuestions();
-  // TODO(后端)：重复上传提醒应先查库比对题干，重复时提示已存在。
-  const q = { id: "q" + Date.now(), subject: document.getElementById("subject").value,
+  await PWQ.ready();
+  if (!PWQ.currentUser()) { PWQ.toast("请先去登录页登录，登录后才能把题存到云端。"); location.href = "index.html"; return; }
+  const q = { subject: document.getElementById("subject").value,
     qkind: document.getElementById("qkind").value,
     type: document.getElementById("type").value,
     stem: document.getElementById("stem").value,
     options: document.getElementById("options").value.split("\n").filter(Boolean),
     answer: document.getElementById("answer").value,
-    explain: await PWQ.explainPlaceholder({type: document.getElementById("type").value}),
+    explain: "",
     reason: document.getElementById("reason").value,
     batch: document.getElementById("batch").value || "未分组",
     starred:false, mastered:false, streak:0, edited:false, note:"" };
-  qs.push(q); PWQ.saveQuestions(qs);
-  PWQ.toast("骨架演示：已保存到本机错题库（未接通真实后端）。");
-  location.href = "bank.html";
+  q.explain = await PWQ.explainPlaceholder({stem: q.stem, options: q.options, answer: q.answer, type: q.type});
+  try {
+    await PWQ.addQuestion(q);
+    PWQ.toast("已保存到云端错题库。");
+    location.href = "bank.html";
+  } catch(e) { PWQ.toast(String(e.message || e)); }
 };
 </script></body></html>
