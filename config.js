@@ -6,13 +6,12 @@
  * 3) GitHub 仓库名（仅用于 GitHub Pages 部署说明，见 README）
  */
 window.APP_CONFIG = {
-  // TODO(用户补)：例如 "https://xxxx.supabase.co"
-  SUPABASE_URL: "YOUR_SUPABASE_URL",
-  // TODO(用户补)：Supabase 项目的 anon key（公开匿名 key，不是 service_role key）
-  SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_KEY",
-  // TODO(用户补)：事先标定的管理员账号（用户名或邮箱，二选一，以实际注册为准）。
-  // 登录时按此账号比对，对得上才显示管理后台；其他账号默认普通用户。
-  ADMIN_ACCOUNT: "YOUR_ADMIN_USERNAME_OR_EMAIL",
+  // Supabase 项目地址（用户 2026-10-27 新建的 cuotiben 项目）
+  SUPABASE_URL: "https://mjsmrltdwcnzmstbjzry.supabase.co",
+  // Supabase 项目的 publishable / anon key（公开匿名 key，不是 service_role key）
+  SUPABASE_ANON_KEY: "sb_publishable_SxvsuKlHWL3merlBLxJz_w_5aGpsNzE",
+  // 事先标定的管理员账号
+  ADMIN_ACCOUNT: "Rafayellllllllllllll",
   // DeepSeek 调用占位：前端不直接调 DeepSeek。
   // 以后应走 Supabase Edge Function 代理，例如：
   // EXPLAIN_FUNCTION_URL: "https://xxxx.supabase.co/functions/v1/explain"
