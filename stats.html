@@ -7,18 +7,16 @@
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<title>拍照错题本 · 错题统计</title>
+<title>拍照错题本 · 统计</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
-<main>
-<div class="card"><h1>错题统计</h1>
-<p class="small">根据云端错题库真实数据统计，新增、删除、编辑后重新打开或点刷新就会同步更新。同一道题只算一次，编辑不改创建时间就不会重复计数。</p>
+<main class="stats-main">
+<h1>统计</h1>
 <div id="loading" class="warn">正在加载统计数据…</div>
 <div id="error" class="warn hidden"></div>
 <div id="content" class="hidden">
-<label>统计日期</label>
-<div>
+<div class="stats-row">
 <button type="button" class="pill rangeBtn" data-range="today">今天</button>
 <button type="button" class="pill rangeBtn" data-range="7">近7天</button>
 <button type="button" class="pill rangeBtn" data-range="30">近30天</button>
@@ -29,22 +27,21 @@
 <label>结束日期</label><input type="date" id="endDate">
 <button type="button" class="secondary" id="applyCustom">按这个范围统计</button>
 </div>
-<p id="rangeText" class="small"></p>
+<p id="rangeText" class="small stats-range-text"></p>
 <p id="totalText"><b></b></p>
-<div>
+<div class="stats-row">
 <button type="button" class="pill viewBtn" data-view="subject">按学科统计</button>
 <button type="button" class="pill viewBtn" data-view="date">按日期统计</button>
 </div>
 <div id="chart"></div>
+<p class="small stats-tip">点击柱子查看对应错题</p>
 <div id="detail"></div>
-<p><button type="button" class="secondary" id="refreshBtn">刷新统计</button>
-<a class="btn ghost" href="bank.html">去错题本</a></p>
-</div>
+<p class="stats-tools"><button type="button" class="bank-tool" id="refreshBtn">刷新统计</button>
+<a class="btn bank-tool" href="bank.html">去错题本</a></p>
 </div>
 </main>
 <nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html" class="active">统计</a><a href="index.html?account=1">我的</a></nav>
 <script>
-const SUBJECTS = ["语文","数学","英语","物理","化学","生物","政治","历史","地理","计算机","其他"];
 let allQs = [];
 let range = "7";
 let customStart = "", customEnd = "";
@@ -93,14 +90,23 @@ function filtered(){
     return d >= r.start && d <= r.end;
   });
 }
+function ticksFor(max){
+  let step = 1;
+  if (max > 10) step = 5;
+  else if (max > 5) step = 2;
+  const ticks = [];
+  for (let v = 0; v <= max; v += step) ticks.push(v);
+  if (ticks[ticks.length-1] !== max) ticks.push(max);
+  return ticks;
+}
 function render(){
   const r = getRange();
-  document.getElementById("rangeText").textContent = "统计范围：" + r.start + " 至 " + r.end + "（按北京时间创建日期算）";
+  document.getElementById("rangeText").textContent = r.start + " 至 " + r.end;
   document.querySelectorAll(".rangeBtn").forEach(b => b.classList.toggle("active", b.dataset.range === range));
   document.querySelectorAll(".viewBtn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
   document.getElementById("customBox").classList.toggle("hidden", range !== "custom");
   const qs = filtered();
-  document.querySelector("#totalText b").textContent = "这个范围内共 " + qs.length + " 道错题";
+  document.querySelector("#totalText b").textContent = "共 " + qs.length + " 道错题";
   const chart = document.getElementById("chart");
   const detail = document.getElementById("detail");
   if (!allQs.length) {
@@ -115,30 +121,37 @@ function render(){
   }
   let bars = [];
   if (view === "subject") {
-    bars = SUBJECTS.map(s => ({key: s, label: s, count: qs.filter(q => (q.subject || "其他") === s).length}));
-    // 不在固定列表里的学科也显示，不丢数据
-    const extra = [...new Set(qs.map(q => q.subject || "其他"))].filter(s => !SUBJECTS.includes(s));
-    extra.forEach(s => bars.push({key: s, label: s, count: qs.filter(q => (q.subject || "其他") === s).length}));
+    const order = [];
+    qs.forEach(q => { const s = q.subject || "其他"; if (!order.includes(s)) order.push(s); });
+    bars = order.map(s => ({key: s, label: s, count: qs.filter(q => (q.subject || "其他") === s).length})).filter(b => b.count > 0);
   } else {
-    bars = dateList(r.start, r.end).map(d => ({key: d, label: d.slice(5), count: qs.filter(q => toCSTDate(q.created_at) === d).length}));
+    bars = dateList(r.start, r.end).map(d => ({key: d, label: d.slice(5), count: qs.filter(q => toCSTDate(q.created_at) === d).length})).filter(b => b.count > 0);
+  }
+  if (!bars.length) {
+    chart.innerHTML = "<p>这个日期范围内还没有错题，换个范围试试。</p>";
+    detail.innerHTML = "";
+    return;
   }
   const max = Math.max(1, ...bars.map(b => b.count));
-  chart.innerHTML = "<p class='small'>纵坐标从 0 开始，最高 " + max + " 道。点柱子可以看对应错题。</p>" +
-    bars.map(b => {
-      const h = Math.round(b.count / max * 140);
-      return "<div class='stat-bar' data-key='" + PWQ.escapeHtml(b.key) + "' style='cursor:pointer'>" +
-        "<div class='stat-count'>" + b.count + "</div>" +
-        "<div class='stat-col'><div class='stat-fill' style='height:" + h + "px'></div></div>" +
-        "<div class='stat-label'>" + PWQ.escapeHtml(b.label) + "</div></div>";
-    }).join("");
-  chart.querySelectorAll(".stat-bar").forEach(el => {
+  const ticks = ticksFor(max);
+  const plotH = 170;
+  const yHtml = ticks.map(v => "<span class='chart-tick' style='bottom:" + (v/max*plotH) + "px'>" + v + "</span>").join("");
+  const gridHtml = ticks.map(v => "<div class='chart-grid' style='bottom:" + (v/max*plotH) + "px'></div>").join("");
+  const barsHtml = bars.map(b => {
+    const h = Math.round(b.count / max * plotH);
+    return "<div class='chart-col' data-key='" + PWQ.escapeHtml(b.key) + "' style='cursor:pointer'>" +
+      "<div class='chart-barwrap'><span class='chart-count'>" + b.count + "</span><div class='chart-fill' style='height:" + h + "px'></div></div>" +
+      "<span class='chart-label'>" + PWQ.escapeHtml(b.label) + "</span></div>";
+  }).join("");
+  chart.innerHTML = "<div class='chart-box'><div class='chart-y'>" + yHtml + "</div><div class='chart-scroll'><div class='chart-bars'>" + gridHtml + barsHtml + "</div></div></div>";
+  chart.querySelectorAll(".chart-col").forEach(el => {
     el.onclick = () => { selectedKey = el.dataset.key; renderDetail(); };
   });
   renderDetail();
 }
 function renderDetail(){
   const detail = document.getElementById("detail");
-  if (!selectedKey) { detail.innerHTML = "<p class='small'>点上面任意一根柱子，这里会列出对应的错题。</p>"; return; }
+  if (!selectedKey) { detail.innerHTML = ""; return; }
   const qs = filtered();
   let list = [];
   let title = "";
@@ -178,7 +191,7 @@ async function load(){
   }
 }
 document.querySelectorAll(".rangeBtn").forEach(b => {
-  b.onclick = () => { range = b.dataset.range; selectedKey = ""; if (range !== "custom") render(); else render(); };
+  b.onclick = () => { range = b.dataset.range; selectedKey = ""; render(); };
 });
 document.querySelectorAll(".viewBtn").forEach(b => {
   b.onclick = () => { view = b.dataset.view; selectedKey = ""; render(); };
