@@ -34,11 +34,12 @@
 <p><button id="recognize">识别所选题目</button></p>
 <div id="unclear" class="warn hidden">识别不清楚或不确定：请重新拍一下再录。建议光线亮一点、拍正一点、离近一点、不要抖。拍清楚了才能录，不能悄悄录不清楚的题。</div>
 <div id="proof" class="hidden">
-<label>题干（校对后可改）</label><textarea id="stem" rows="3">示例题干：请校对后确认。</textarea>
-<label>选项（校对后可改）</label><textarea id="options" rows="4">A. 示例选项一
-B. 示例选项二
-C. 示例选项三
-D. 示例选项四</textarea>
+<label>题干（校对后可改）</label><textarea id="stem" rows="3" placeholder="这里本来应该自动填你照片里的题目，但现在识别还读不出来，请手动输入题干"></textarea>
+<label>选项（校对后可改）</label><textarea id="options" rows="4" placeholder="A. 
+B. 
+C. 
+D. 
+手动输入每个选项，一行一个"></textarea>
 <label>正确答案（先确认，再生成解析）</label><select id="answer"><option>A</option><option>B</option><option>C</option><option>D</option></select>
 <label>学科（自动分类，分错可手动改）</label><select id="subject">
 <option>语文</option><option>数学</option><option>政治</option><option>物理</option>
@@ -47,7 +48,7 @@ D. 示例选项四</textarea>
 <label>解析类型（网站自主判断）</label><select id="type"><option>定量计算类</option><option>定性辨析类</option></select>
 <label>错因标签</label><select id="reason"><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>
 <p><button id="saveQ">确认无误，保存到错题库</button></p>
-<p class="small">智能框选说明：上一版本机文字识别在数学符号、横拍照片、题号被手写遮住时经常认不出题号，已改为“识别不到就直接说识别不到、给手动框选”，不再给假框。学科自动分类、真实 DeepSeek 解析仍为占位，见 README。</p>
+<p class="small">实话：现在识别还读不出照片里的题目文字，题干和选项不会自动填，需要手动输入。框选只是框住题目位置，文字提取和 DeepSeek 解析仍未接通，见 README。</p>
 </div></div>
 </main><footer>云端版 · 照片不上传、不存储，保存的文字存在 Supabase</footer>
 <script>
@@ -229,9 +230,11 @@ document.getElementById("recognize").onclick = () => {
     PWQ.toast("请先点方框选至少一道错题；只有一道题时可勾选“只有一道题”。");
     return;
   }
-  const unclear = confirm("骨架演示：点“确定”模拟识别清楚，进入校对；点“取消”模拟识别不清，提示重拍。\n真实版：识别不清或不确定时必须自动提示重拍，不能悄悄录入。");
-  document.getElementById("unclear").classList.toggle("hidden", unclear);
-  document.getElementById("proof").classList.toggle("hidden", !unclear);
+  // 实话：现在识别还读不出照片里的题目文字，所以不会自动填题干和选项。
+  // 点“识别”后直接进校对页，题干和选项是空的，需要你手动输入，这是目前的真实状态，不是你拍错了。
+  document.getElementById("unclear").classList.add("hidden");
+  document.getElementById("proof").classList.remove("hidden");
+  PWQ.toast("识别没有读出题目文字，题干和选项是空的，请手动输入后再保存。");
 };
 document.getElementById("saveQ").onclick = async () => {
   await PWQ.ready();

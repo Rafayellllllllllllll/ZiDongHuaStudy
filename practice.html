@@ -55,8 +55,8 @@ function show(){
     } else { target.streak = 0; }
     try { await PWQ.updateQuestion(target); } catch(e) { PWQ.toast(String(e.message || e)); }
     area.querySelectorAll(".opt").forEach(b => {
-      if (b.dataset.ans === q.answer) b.classList.add("correct");
-      else if (b.dataset.ans === ans) b.classList.add("wrong");
+      if (b.dataset.ans === q.answer) { b.classList.add("correct"); b.innerHTML += "<span class='mark'>正确答案</span>"; }
+      else if (b.dataset.ans === ans) { b.classList.add("wrong"); b.innerHTML += "<span class='mark'>你选了 ×</span>"; }
       b.disabled = true;
     });
     document.getElementById("result").innerHTML =
@@ -64,7 +64,7 @@ function show(){
       " 正确答案：" + PWQ.escapeHtml(q.answer) +
       "；连续做对次数：" + target.streak +
       (target.mastered ? "；已连续做对三次，标为已经会了。" : "") + "</p>" +
-      "<p>解析：" + PWQ.escapeHtml(q.explain) + "</p>" +
+      "<div class='explain'><b>红笔解析：</b>" + PWQ.escapeHtml(q.explain) + "</div>" +
       "<button id='next'>下一题</button> " +
       "<button class='secondary' id='similar'>按知识点生成一道同类题（占位）</button>";
     document.getElementById("next").onclick = () => {
