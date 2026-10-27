@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
 <header><div class="logo">拍照<span>错题本</span></div>
-<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<nav><a href="home.html">← 回主页</a></nav></header>
 <main>
 <div class="card"><h1>易错题</h1>
 <p>错题库里点星星收藏的、特别薄弱、容易错的题都在这里，和笔记本并列、互不干扰。</p>
@@ -28,4 +28,6 @@ qs.forEach(q => {
   list.appendChild(d);
 });
 })();
-</script></body></html>
+</script>
+<nav class="bottomnav" style="position:fixed;left:0;right:0;bottom:0;background:#fffdf7;border-top:3px solid #2b2b3a;display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20"><a href="home.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">🏠<br>主页</a><a href="bank.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">📊<br>统计</a><a href="index.html?account=1" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">👤<br>我的</a></nav>
+</body></html>

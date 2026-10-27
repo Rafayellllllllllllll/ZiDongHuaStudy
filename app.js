@@ -84,7 +84,7 @@ function toLocal(row){
     answer: row.correct_answer || "", explain: row.explain || "",
     reason: row.error_reason || "", batch: row.batch || "未分组",
     starred: !!row.starred, mastered: !!row.mastered,
-    streak: row.consecutive_correct || 0, edited: !!row.explain_edited, note: row.note || ""
+    streak: row.consecutive_correct || 0, edited: !!row.explain_edited, note: row.note || "", created_at: row.created_at || ""
   };
 }
 function toCloud(q, ownerId){

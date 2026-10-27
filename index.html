@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
 <header><div class="logo">拍照<span>错题本</span></div>
-<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<nav><a href="home.html">主页</a></nav></header>
 <main>
 <div class="card"><h1>第一次使用，先注册登录</h1>
 <p>每个人用自己的账号登录，各人数据独立，互相看不到。分享给朋友时，把网站链接发给朋友，朋友自己注册自己的账号。</p>
@@ -29,6 +29,8 @@
 (async () => {
   await PWQ.ready();
   const u = PWQ.currentUser();
+  const params = new URLSearchParams(location.search);
+  if (u && params.get("account") !== "1") { location.href = "home.html"; return; }
   if (u) {
     document.getElementById("who").textContent = "当前已登录：" + u.username + (u.role === "admin" ? "（管理员）" : "");
     document.getElementById("username").value = u.username;
@@ -44,7 +46,7 @@ document.getElementById("f").addEventListener("submit", async e => {
   try {
     await PWQ.signInOrUp(username, password, email);
     PWQ.toast("已登录，数据在云端，换设备登录同一个账号也能看到。");
-    location.href = "upload.html";
+    location.href = "home.html";
   } catch (err) {
     PWQ.toast(String(err.message || err));
   }

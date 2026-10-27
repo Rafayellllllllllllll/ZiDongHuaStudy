@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
 <header><div class="logo">拍照<span>错题本</span></div>
-<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="errors.html">易错题</a><a href="admin.html">管理</a></nav></header>
+<nav><a href="home.html">← 回主页</a></nav></header>
 <main>
 <div class="card"><h1>练习</h1>
 <p>练习前自选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。</p>
@@ -68,4 +68,6 @@ function show(){
 document.getElementById("start").onclick = start;
 document.getElementById("review").onclick = () =>
   PWQ.toast("占位：已掌握复查应隔一段时间（例如一两周，具体天数待定）再随机抽查，抽查错了回到未掌握。当前骨架不自动排期。");
-</script></body></html>
+</script>
+<nav class="bottomnav" style="position:fixed;left:0;right:0;bottom:0;background:#fffdf7;border-top:3px solid #2b2b3a;display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20"><a href="home.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">🏠<br>主页</a><a href="bank.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">📊<br>统计</a><a href="index.html?account=1" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">👤<br>我的</a></nav>
+</body></html>
