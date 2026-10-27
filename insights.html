@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fdf8f0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>拍照错题本 · 感悟</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script></head><body>
+<header><div class="logo">拍照<span>错题本</span></div>
+<nav><a href="index.html">登录</a><a href="upload.html">录错题</a><a href="bank.html">错题库</a><a href="practice.html">练习</a><a href="notebook.html">笔记本</a><a href="admin.html">管理</a></nav></header>
+<main>
+<div class="card"><h1>自己的感悟（另一面，单独一页）</h1>
+<p>一条一条列出。错题库里的解析可以直接复制，粘到这里。</p>
+<form id="f"><label>写一条感悟</label><textarea id="text" rows="3" required placeholder="例如：这道题我总是先算加法，记住先乘除后加减。"></textarea>
+<button type="submit">加一条</button></form>
+<div id="list"></div>
+<p><a class="btn secondary" href="notebook.html">← 回笔记本难的题</a><a class="btn ghost" href="bank.html">去错题库复制解析</a></p></div>
+</main><footer>本地骨架 · 感悟只存本机（未接通后端）</footer>
+<script>
+function render(){
+  const items = PWQ.store("pwq_insights", []);
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  if (!items.length) list.innerHTML = "<p>还没有感悟。也可以先去错题库复制解析，再粘到这里。</p>";
+  items.forEach((t, i) => {
+    const d = document.createElement("div");
+    d.className = "qitem";
+    d.textContent = (i+1) + ". " + t;
+    list.appendChild(d);
+  });
+}
+document.getElementById("f").addEventListener("submit", e => {
+  e.preventDefault();
+  const items = PWQ.store("pwq_insights", []);
+  items.push(document.getElementById("text").value.trim());
+  PWQ.save("pwq_insights", items);
+  document.getElementById("text").value = "";
+  render();
+});
+render();
+</script></body></html>
