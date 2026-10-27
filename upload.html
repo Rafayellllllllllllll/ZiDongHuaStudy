@@ -3,18 +3,38 @@
 <title>拍照错题本 · 录错题</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
-<header><div class="logo">拍照<span>错题本</span></div>
-<nav><a href="home.html">← 回主页</a></nav></header>
+<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script>
+<style>
+.cam-wrap{position:relative;border:3px solid #2b2b3a;border-radius:16px;overflow:hidden;background:#000;min-height:320px}
+.cam-wrap video{width:100%;display:block;background:#000}
+.cam-wrap img{width:100%;display:block}
+.cam-controls{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;padding:12px;pointer-events:none}
+.cam-controls button{pointer-events:auto}
+.album-btn{width:56px;height:56px;border-radius:12px;border:3px solid #fff;background:#fffdf7;font-size:24px}
+.shoot-btn{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:#ff4d8d;color:#fff;font-size:14px;font-weight:900}
+.cam-tip{position:absolute;top:10px;left:10px;right:10px;color:#fff;background:rgba(0,0,0,.5);border-radius:10px;padding:6px 10px;font-size:13px;text-align:center}
+</style></head><body>
+<header><div class="logo">拍照<span>错题本</span></div></header>
 <main>
 <div class="card"><h1>录错题</h1>
 <p>照片只用来提取文字，不存照片。拍完或传完后，照片只在本页预览，保存的只有提取出来的文字。</p>
-<label>1. 拍照或上传图片</label>
-<p><label class="btn">直接拍照<input type="file" accept="image/*" capture="environment" id="camera" class="hidden"></label>
-<label class="btn secondary">上传已有图片<input type="file" accept="image/*" id="file" class="hidden"></label></p>
+<label>1. 对着题目拍照</label>
+<p class="small">点开这一页就直接是相机视角，对着题目拍。右下角是相册，点开可以从相册里选已有的照片，不用每次都现拍。</p>
+<div class="cam-wrap" id="camWrap">
+<video id="camVideo" autoplay playsinline muted></video>
+<div class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</div>
+<div class="cam-controls">
+<button type="button" class="secondary" id="switchCam">换摄像头</button>
+<button type="button" class="shoot-btn" id="shootBtn">拍照</button>
+<label class="album-btn" title="打开相册">🖼️<input type="file" accept="image/*" id="file" class="hidden"></label>
+</div>
+</div>
+<canvas id="camCanvas" class="hidden"></canvas>
+<p><button type="button" class="secondary" id="retakeBtn" style="display:none">重拍 / 回到相机</button>
+<button type="button" class="secondary" id="oldCameraBtn">打不开相机？用系统相机拍照</button><input type="file" accept="image/*" capture="environment" id="camera" class="hidden"></p>
 <label>试卷 / 日期分组（选填）</label><input id="batch" placeholder="例如：2026-10-27 试卷A">
 <label><input type="checkbox" id="single" style="width:auto"> 这张照片里只有一道题（勾选后不用额外指定，直接按这一道处理）</label>
-<div class="photo-stage" id="stage"><p style="padding:20px">还没选照片。选照片后，这里会出现透明色方框（骨架演示框）。</p></div>
+<div class="photo-stage" id="stage"><p style="padding:20px">还没选照片。拍完或从相册选完后，这里会出现透明色方框（骨架演示框）。</p></div>
 <p><button type="button" class="secondary" id="addBox">手动补框：没框住的题，拖一下补框再选</button>
 <button type="button" id="selectAll">全选已框的题</button></p>
 <p class="small">用法：直接点方框选错题，点中的和没点中的颜色不一样。不用填题号。没框住的题用“手动补框”。</p>
@@ -43,7 +63,26 @@ D. 示例选项四</textarea>
 </main><footer>云端版 · 照片不上传、不存储，保存的文字存在 Supabase</footer>
 <script>
 let boxes = [];
+let camStream = null;
+let facing = "environment";
 const stage = document.getElementById("stage");
+const video = document.getElementById("camVideo");
+const tip = document.getElementById("camTip");
+async function startCamera(){
+  try {
+    if (camStream) camStream.getTracks().forEach(t => t.stop());
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+    video.srcObject = camStream;
+    video.style.display = "block";
+    tip.textContent = "对着题目，点中间粉色按钮拍照，右下角相册可以选已有照片";
+  } catch(e) {
+    tip.textContent = "相机打不开：请允许相机权限，或点下面“打不开相机？用系统相机拍照”";
+    video.style.display = "none";
+  }
+}
+function stopCamera(){
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+}
 function renderBoxes(){
   stage.querySelectorAll(".qbox").forEach(n => n.remove());
   boxes.forEach((b, i) => {
@@ -60,18 +99,40 @@ function showImage(file){
   if (!file) return;
   const url = URL.createObjectURL(file);
   stage.innerHTML = '<img id="photo" src="' + url + '" alt="上传的照片预览（不存储）">';
-  // 骨架演示框：真实框选应由题目切分算法生成，这里先给两个示例框用于走流程。
   boxes = [
     {x:5,y:8,w:90,h:38,selected:false},
     {x:5,y:52,w:90,h:38,selected:false},
   ];
   if (document.getElementById("single").checked) boxes = [boxes[0]];
   renderBoxes();
+  document.getElementById("stage").scrollIntoView({behavior:"smooth"});
 }
+function showImageFromCanvas(){
+  const canvas = document.getElementById("camCanvas");
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    showImage(blob);
+    stopCamera();
+    document.getElementById("retakeBtn").style.display = "inline-block";
+    tip.textContent = "已拍好，下面点方框选错题。想重拍点“重拍 / 回到相机”。";
+  }, "image/jpeg", 0.9);
+}
+document.getElementById("shootBtn").onclick = showImageFromCanvas;
+document.getElementById("switchCam").onclick = async () => {
+  facing = facing === "environment" ? "user" : "environment";
+  await startCamera();
+};
+document.getElementById("retakeBtn").onclick = async () => {
+  document.getElementById("retakeBtn").style.display = "none";
+  await startCamera();
+};
+document.getElementById("oldCameraBtn").onclick = () => document.getElementById("camera").click();
 document.getElementById("camera").addEventListener("change", e => showImage(e.target.files[0]));
 document.getElementById("file").addEventListener("change", e => showImage(e.target.files[0]));
 document.getElementById("addBox").onclick = () => {
-  // 骨架简化版手动补框：点一下加一个框；真实版应支持在照片上拖动框选。
   boxes.push({x:5, y:10 + boxes.length*8, w:90, h:20, selected:false});
   renderBoxes();
   PWQ.toast("骨架演示：已补一个框。真实版应在照片上拖动补框，见 README。");
@@ -83,7 +144,6 @@ document.getElementById("recognize").onclick = () => {
     PWQ.toast("请先点方框选至少一道错题；只有一道题时可勾选“只有一道题”。");
     return;
   }
-  // 骨架演示：用确认框模拟“识别不清”分支；真实版应按识别置信度自动判断。
   const unclear = confirm("骨架演示：点“确定”模拟识别清楚，进入校对；点“取消”模拟识别不清，提示重拍。\n真实版：识别不清或不确定时必须自动提示重拍，不能悄悄录入。");
   document.getElementById("unclear").classList.toggle("hidden", unclear);
   document.getElementById("proof").classList.toggle("hidden", !unclear);
@@ -108,6 +168,9 @@ document.getElementById("saveQ").onclick = async () => {
     location.href = "bank.html";
   } catch(e) { PWQ.toast(String(e.message || e)); }
 };
+// 点开这一页就直接打开相机，不用再点一次拍照按钮。
+startCamera();
+window.addEventListener("beforeunload", stopCamera);
 </script>
 <nav class="bottomnav" style="position:fixed;left:0;right:0;bottom:0;background:#fffdf7;border-top:3px solid #2b2b3a;display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20"><a href="home.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">🏠<br>主页</a><a href="bank.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">📊<br>统计</a><a href="index.html?account=1" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">👤<br>我的</a></nav>
 </body></html>
