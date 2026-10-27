@@ -3,7 +3,7 @@
 <title>拍照错题本 · 错题库</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>错题库</h1>
 <p>按学科自动分类，学科分错可手动改。已经会了的题仍在这里可见，并格外标出。数据在云端，换设备登录同一个账号也能看到。</p>
@@ -80,5 +80,5 @@ async function render(){
   document.getElementById(id).addEventListener("change", render));
 render();
 </script>
-<nav class="bottomnav" style="position:fixed;left:0;right:0;bottom:0;background:#fffdf7;border-top:3px solid #2b2b3a;display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20"><a href="home.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">🏠<br>主页</a><a href="bank.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">📊<br>统计</a><a href="index.html?account=1" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">👤<br>我的</a></nav>
+<nav class="bottomnav"><a href="home.html">🏠<br>主页</a><a href="bank.html">📊<br>统计</a><a href="index.html?account=1">👤<br>我的</a></nav>
 </body></html>

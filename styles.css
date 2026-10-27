@@ -1,57 +1,83 @@
-/* 风格：浅蓝打底、粉色为主、亮粉强调、薄荷绿小面积点缀、白色提亮。
- * 可爱贴纸拼贴感，粗线条、圆角、贴纸阴影。
- * 注意：本骨架先只用配色和风格，不嵌入用户参考图里的人物。
- * 人物规则（见 README）：三个一起搬、好看不突兀才搬、否则不搬，待用户看效果再定。
+/* 风格：跟 Muse 里“单招错题集”一模一样的干净样式。
+ * 白底、浅灰分隔、细边框、轻阴影、深灰文字，没有贴纸、没有粗黑边框、没有大面积粉蓝。
+ * 交互跟单招错题集一样：卡片 + 点选按钮，选中、答对、答错状态一眼能看出来。
  */
 :root{
-  --blue:#dbeeff; --blue2:#aed6ff; --pink:#ffb8d1; --pink-hot:#ff4d8d;
-  --mint:#b8f1d6; --white:#fffdf7; --ink:#2b2b3a; --line:#2b2b3a;
+  --bg:#f5f5f7; --card:#ffffff; --ink:#1a1a1a; --muted:#666666;
+  --line:#e5e5ea; --primary:#111111; --accent:#007aff;
+  --accent-bg:#eaf2ff; --good:#0a9d6b; --good-bg:#e6f4ea; --bad:#d92d20; --bad-bg:#fdecea;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--blue);color:var(--ink);
-  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
-a{color:#d61e6b}
-header{position:sticky;top:0;background:var(--white);border-bottom:3px solid var(--line);
-  padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-header .logo{font-weight:900;font-size:20px}
-header .logo span{color:var(--pink-hot)}
-nav a{margin-right:10px;text-decoration:none;font-weight:700}
-main{max-width:900px;margin:0 auto;padding:8px 16px 90px}
-.card{background:var(--white);border:3px solid var(--line);border-radius:20px;
-  padding:18px;margin:16px 0;box-shadow:5px 5px 0 var(--pink)}
-.card.mint{box-shadow:5px 5px 0 var(--mint)}
-h1{font-size:24px;margin:8px 0} h2{font-size:19px;margin:6px 0} h3{font-size:16px}
-label{display:block;margin:10px 0 4px;font-weight:700}
-input,select,textarea{width:100%;padding:10px;border:2px solid var(--line);
-  border-radius:12px;background:#fff;font-size:15px}
-button,.btn{display:inline-block;border:3px solid var(--line);border-radius:999px;
-  background:var(--pink-hot);color:#fff;font-weight:800;padding:10px 18px;
-  cursor:pointer;text-decoration:none;margin:6px 6px 6px 0}
-button.secondary,.btn.secondary{background:var(--mint);color:var(--ink)}
-button.ghost,.btn.ghost{background:#fff;color:var(--ink)}
-.warn{background:#fff3c4;border:3px dashed var(--line);border-radius:14px;padding:12px;margin:12px 0}
-.small{font-size:13px;color:#555}
-.tag{display:inline-block;background:var(--mint);border:2px solid var(--line);
-  border-radius:999px;padding:2px 10px;margin:2px;font-size:13px}
-.tag.pink{background:var(--pink)}
-.mastered{outline:3px solid var(--pink-hot)}
-/* 上传照片框选区：透明色方框，文字仍可见 */
-.photo-stage{position:relative;border:3px solid var(--line);border-radius:16px;
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-tap-highlight-color:transparent}
+a{color:var(--accent);text-decoration:none}
+header{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);
+  padding:14px 16px;display:flex;gap:12px;align-items:center}
+header .logo{font-weight:800;font-size:18px}
+header .logo span{color:var(--ink)}
+nav a{margin-right:12px;text-decoration:none;font-weight:600;color:var(--ink)}
+main{max-width:720px;margin:0 auto;padding:12px 16px 96px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:18px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card.mint{box-shadow:0 1px 3px rgba(0,0,0,.06)}
+h1{font-size:22px;margin:8px 0;line-height:1.4} h2{font-size:18px;margin:6px 0} h3{font-size:16px}
+label{display:block;margin:12px 0 6px;font-weight:600;font-size:14px}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);
+  border-radius:10px;background:#fff;font-size:15px;color:var(--ink)}
+button,.btn{display:inline-block;border:none;border-radius:999px;
+  background:var(--primary);color:#fff;font-weight:700;padding:12px 20px;
+  cursor:pointer;text-decoration:none;margin:6px 6px 6px 0;font-size:15px}
+button.secondary,.btn.secondary{background:#efeff4;color:var(--ink)}
+button.ghost,.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.warn{background:#fff8e1;border:1px solid #f5c542;border-radius:12px;padding:12px;margin:12px 0;font-size:14px}
+.small{font-size:13px;color:var(--muted);line-height:1.6}
+.tag{display:inline-block;background:#efeff4;border-radius:999px;padding:3px 10px;margin:2px;font-size:13px;color:var(--ink)}
+.tag.pink{background:var(--accent-bg);color:var(--accent)}
+.mastered{outline:2px solid var(--good)}
+/* 拍照页全屏相机保持全屏，不受卡片样式影响 */
+.camscreen{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column}
+.camscreen video{flex:1;width:100%;height:100%;object-fit:cover;background:#000}
+.cam-top{display:flex;justify-content:space-between;align-items:center;padding:12px;color:#fff;background:rgba(0,0,0,.55)}
+.cam-top a{color:#fff;font-weight:700}
+.cam-tip{font-size:13px;text-align:right;max-width:70%}
+.cam-controls{display:flex;justify-content:space-between;align-items:flex-end;padding:18px 20px 28px;background:rgba(0,0,0,.55)}
+.album-btn{width:56px;height:56px;border-radius:12px;border:2px solid #fff;background:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.shoot-btn{width:76px;height:76px;border-radius:50%;border:4px solid #fff;background:var(--accent);color:#fff;font-size:14px;font-weight:800}
+.switch-btn{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-weight:700}
+/* 照片框选：细边、半透明，跟单招错题集的选中状态一样干净 */
+.photo-stage{position:relative;border:1px solid var(--line);border-radius:16px;
   overflow:hidden;background:#fff;min-height:220px}
 .photo-stage img{width:100%;display:block}
-.qbox{position:absolute;border:3px solid #ff4d8d;background:rgba(255,184,209,.28);
-  border-radius:10px;cursor:pointer}
-.qbox.selected{background:rgba(184,241,214,.45);border-color:#0a9d6b}
-.qbox span{position:absolute;top:2px;left:6px;background:#fff;border:2px solid var(--line);
-  border-radius:999px;padding:0 8px;font-size:12px;font-weight:800}
-.qitem{border:2px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:#fff}
+.qbox{position:absolute;border:2px solid var(--accent);background:rgba(0,122,255,.12);
+  border-radius:10px;cursor:move;touch-action:none}
+.qbox.selected{background:rgba(10,157,107,.18);border-color:var(--good)}
+.qbox span{position:absolute;top:2px;left:6px;background:#fff;border:1px solid var(--line);
+  border-radius:999px;padding:0 8px;font-size:12px;font-weight:700;pointer-events:none}
+.qbox .handle{position:absolute;right:-6px;bottom:-6px;width:24px;height:24px;background:var(--accent);border:3px solid #fff;border-radius:50%;cursor:nwse-resize}
+.qbox .del{position:absolute;top:-8px;right:-8px;width:24px;height:24px;background:#fff;border:1px solid var(--line);border-radius:50%;font-weight:800;line-height:20px;text-align:center;cursor:pointer}
+.qitem{border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;background:#fff}
 .hidden{display:none}
 table{width:100%;border-collapse:collapse}
-td,th{border:2px solid var(--line);padding:8px;text-align:left;font-size:14px}
-footer{padding:20px;text-align:center;color:#555;font-size:13px}
-/* 随机小元素装饰层：低密度、边缘散落、不遮挡、不拦截点击 */
-header,main{position:relative;z-index:1}
-.pwq-decor{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.pwq-deco{position:absolute;line-height:1;filter:drop-shadow(2px 2px 0 rgba(255,184,209,.9));
-  image-rendering:pixelated}
-@media (max-width:640px){.pwq-deco{filter:drop-shadow(1px 1px 0 rgba(255,184,209,.9))}}
+td,th{border:1px solid var(--line);padding:10px;text-align:left;font-size:14px}
+footer{padding:20px;text-align:center;color:var(--muted);font-size:13px}
+/* 底部导航：跟单招错题集一样干净，白底、细上边、三个入口 */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20}
+.bottomnav a{text-decoration:none;color:var(--muted);font-weight:600;font-size:13px;text-align:center}
+.bottomnav a.active{color:var(--ink)}
+/* 主页：标题 + 右上小头像、大按钮、两行两列、统计条，跟之前定的排版一样，只是换成干净样式 */
+.home-head{display:flex;justify-content:space-between;align-items:center}
+.avatar{width:36px;height:36px;border-radius:50%;background:#efeff4;display:flex;align-items:center;justify-content:center;font-weight:800;cursor:pointer;flex:0 0 auto}
+.avatar-menu{position:absolute;right:16px;top:64px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;z-index:10;min-width:180px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.big-photo{display:block;width:100%;text-align:center;font-size:18px;padding:16px 12px;margin:12px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.grid2 a{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 12px;text-decoration:none;color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.grid2 a .ic{font-size:24px;flex:0 0 auto}
+.grid2 a small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
+.statsbar{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;text-decoration:none;color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+
+/* 练习点选：跟单招错题集一样，选项是整行可点的大按钮，选中是蓝底，答对绿、答错红 */
+.opt{display:block;width:100%;text-align:left;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;font-size:15px;font-weight:600}
+.opt.selected{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.opt.correct{background:var(--good-bg);border-color:var(--good);color:var(--good)}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}

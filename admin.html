@@ -3,7 +3,7 @@
 <title>拍照错题本 · 管理</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>管理后台（仅管理员）</h1>
 <p>管理员是事先标定的主人账号。能看谁登录、什么时候用；看不到朋友的错题内容。朋友默认普通用户，看不到这一页。</p>
@@ -44,5 +44,5 @@ document.getElementById("logoutAll").onclick = async () => {
   location.href = "index.html";
 };
 </script>
-<nav class="bottomnav" style="position:fixed;left:0;right:0;bottom:0;background:#fffdf7;border-top:3px solid #2b2b3a;display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20"><a href="home.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">🏠<br>主页</a><a href="bank.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">📊<br>统计</a><a href="index.html?account=1" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">👤<br>我的</a></nav>
+<nav class="bottomnav"><a href="home.html">🏠<br>主页</a><a href="bank.html">📊<br>统计</a><a href="index.html?account=1">👤<br>我的</a></nav>
 </body></html>

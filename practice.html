@@ -3,7 +3,7 @@
 <title>拍照错题本 · 练习</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script><script src="app.js"></script><script src="decorations.js"></script></head><body>
+<script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>练习</h1>
 <p>练习前自选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。</p>
@@ -33,12 +33,20 @@ function show(){
   area.innerHTML = "<div class='qitem'><p>第 " + (idx+1) + " / " + pool.length + " 题 · " +
     PWQ.escapeHtml(q.subject) + " · " + PWQ.escapeHtml(q.type) + "</p>" +
     "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
-    "<p>" + q.options.map(o => PWQ.escapeHtml(o)).join("<br>") + "</p>" +
-    "<p class='small'>答的时候先不显示答案和解析。</p>" +
-    "<p><label>你的答案</label><select id='ans'><option>A</option><option>B</option><option>C</option><option>D</option></select></p>" +
+    q.options.map((o, oi) => "<button class='opt' data-ans='" + String.fromCharCode(65+oi) + "'>" + String.fromCharCode(65+oi) + ". " + PWQ.escapeHtml(o) + "</button>").join("") +
+    "<p class='small'>答的时候先不显示答案和解析。点一个选项，再点提交答案。</p>" +
     "<button id='submit'>提交答案</button><div id='result'></div></div>";
+  let chosen = "";
+  area.querySelectorAll(".opt").forEach(b => {
+    b.onclick = () => {
+      chosen = b.dataset.ans;
+      area.querySelectorAll(".opt").forEach(x => x.classList.remove("selected"));
+      b.classList.add("selected");
+    };
+  });
   document.getElementById("submit").onclick = async () => {
-    const ans = document.getElementById("ans").value;
+    const ans = chosen;
+    if (!ans) { PWQ.toast("请先点一个选项。"); return; }
     const ok = ans === q.answer;
     const qs = PWQ.getQuestions();
     const target = qs.find(x => x.id === q.id);
@@ -46,6 +54,11 @@ function show(){
       if (target.streak >= 3) target.mastered = true;
     } else { target.streak = 0; }
     try { await PWQ.updateQuestion(target); } catch(e) { PWQ.toast(String(e.message || e)); }
+    area.querySelectorAll(".opt").forEach(b => {
+      if (b.dataset.ans === q.answer) b.classList.add("correct");
+      else if (b.dataset.ans === ans) b.classList.add("wrong");
+      b.disabled = true;
+    });
     document.getElementById("result").innerHTML =
       "<p>" + (ok ? "答对了。" : "答错了，计数清零，这道题重新回到练习里。") +
       " 正确答案：" + PWQ.escapeHtml(q.answer) +
@@ -67,5 +80,5 @@ document.getElementById("start").onclick = start;
 document.getElementById("review").onclick = () =>
   PWQ.toast("占位：已掌握复查应隔一段时间（例如一两周，具体天数待定）再随机抽查，抽查错了回到未掌握。当前骨架不自动排期。");
 </script>
-<nav class="bottomnav" style="position:fixed;left:0;right:0;bottom:0;background:#fffdf7;border-top:3px solid #2b2b3a;display:flex;justify-content:space-around;padding:10px 0 14px;z-index:20"><a href="home.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">🏠<br>主页</a><a href="bank.html" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">📊<br>统计</a><a href="index.html?account=1" style="text-decoration:none;color:#2b2b3a;font-weight:800;font-size:14px;text-align:center">👤<br>我的</a></nav>
+<nav class="bottomnav"><a href="home.html">🏠<br>主页</a><a href="bank.html">📊<br>统计</a><a href="index.html?account=1">👤<br>我的</a></nav>
 </body></html>
