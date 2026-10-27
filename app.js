@@ -120,6 +120,50 @@ function toCloud(q, ownerId){
     starred: !!q.starred, mastered: !!q.mastered, consecutive_correct: q.streak || 0
   };
 }
+
+// 知识点收藏：本地持久化（按账号分开存），同一知识点唯一标识 = 学科 + 知识点名称，跨题目、跨选项只算一个。
+function kpKey(){ return "pwq_kp_" + ((_profile && _profile.username) || "guest"); }
+function getKnowledgePoints(){
+  try { const v = JSON.parse(localStorage.getItem(kpKey()) || "[]"); return Array.isArray(v) ? v : []; } catch(e){ return []; }
+}
+function saveKnowledgePoints(list){ try { localStorage.setItem(kpKey(), JSON.stringify(list)); } catch(e){} }
+function kpId(subject, name){ return String(subject || "其他") + "｜" + String(name || "").trim(); }
+function isKnowledgeFavorited(id){ return getKnowledgePoints().some(k => k.id === id); }
+function toggleKnowledgePoint(kp){
+  const list = getKnowledgePoints();
+  const idx = list.findIndex(k => k.id === kp.id);
+  if (idx >= 0) { list.splice(idx, 1); saveKnowledgePoints(list); return false; }
+  list.unshift({id: kp.id, name: kp.name, subject: kp.subject || "其他", chapter: kp.chapter || "", summary: kp.summary || "", detail: kp.detail || "", questionIds: kp.questionIds || []});
+  saveKnowledgePoints(list); return true;
+}
+function linkKnowledgeToQuestion(kpIdVal, qid){
+  const list = getKnowledgePoints();
+  const k = list.find(x => x.id === kpIdVal);
+  if (k && qid && !k.questionIds.includes(qid)) { k.questionIds.push(qid); saveKnowledgePoints(list); }
+}
+// 从一道题里提取知识点：优先用解析里提到的概念词，否则用学科 + 题干关键词兜底，绝不编造具体知识点名称以外的解析。
+function extractKnowledgePoints(q){
+  const subject = q.subject || "其他";
+  const points = [];
+  const add = (name, summary) => {
+    if (!name) return;
+    const id = kpId(subject, name);
+    if (!points.some(x => x.id === id)) points.push({id, name, subject, chapter: "", summary: summary || "", detail: q.explain || "", questionIds: [q.id]});
+  };
+  // 定性辨析：每个选项对应一个知识点，名称取选项解析里的第一句关键词，兜底用选项内容本身
+  if (q.type === "定性辨析类" && q.options && q.options.length) {
+    q.options.forEach(o => {
+      const letter = o.trim().charAt(0);
+      const content = o.replace(/^[A-D][\.、．：:]\s*/, "").trim();
+      if (content) add(content.slice(0, 24), "选项 " + letter + " 涉及的知识点，见该题解析。");
+    });
+  }
+  // 计算型：用题干里的核心词做一个知识点，名称取题干前 20 字，避免空
+  if (!points.length && q.stem) {
+    add(q.stem.replace(/\s+/g, "").slice(0, 20), q.explain ? q.explain.slice(0, 60) : "");
+  }
+  return points;
+}
 function getQuestions(){ return _questionsCache ? [..._questionsCache] : []; }
 function getNotes(){ return _notesCache ? [..._notesCache] : []; }
 
@@ -260,6 +304,7 @@ function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin,
   toast, escapeHtml, cleanLatex, getQuestions, saveQuestions, explainPlaceholder,
   ready, signInOrUp, signOut, signOutAll, addQuestion, updateQuestion, deleteQuestion,
+  getKnowledgePoints, saveKnowledgePoints, kpId, isKnowledgeFavorited, toggleKnowledgePoint, linkKnowledgeToQuestion, extractKnowledgePoints,
   getNotes, addNote, updateNote, deleteNote, loadProfile };
 document.addEventListener("DOMContentLoaded", banner);
 })();

@@ -8,14 +8,15 @@
 <div class="card"><h1>错题库</h1>
 <p class="small">点进去首先是全部，从上到下按时间从近到远排，不分科目，全部都能在全部那一栏看到。想看某个学科，就点最上方的小胶囊。</p>
 <p><button type="button" class="secondary" id="dedupBtn">一键清理重复题</button> <span class="small" id="dedupInfo"></span></p>
-<div id="pills"></div>
+<div id="pills" class="pills-scroll"></div>
 <div id="list"></div>
 <p><button class="secondary" onclick="window.print()">导出打印（浏览器打印）</button>
 <a class="btn ghost" href="practice.html">去练习</a></p>
 <p class="small">数据在云端，换设备登录同一个账号也能看到。删除后统计也会同步更新。</p></div>
 </main><footer>云端版 · 数据存在 Supabase</footer>
+<div class="zyb-backdrop" id="kpBackdrop"></div><section class="kp-sheet" id="kpSheet"><div class="zyb-grab"></div><button type="button" class="zyb-close" id="kpClose">×</button><div class="kp-sheet-body" id="kpBody"></div></section>
 <script>
-const SUBJECTS = ["全部","语文","数学","英语","物理","化学","生物","政治","历史","地理","计算机","其他"];
+function dynamicSubjects(){ const s = ["全部"]; allQs.forEach(q => { const sub = q.subject || "其他"; if (!s.includes(sub)) s.push(sub); }); return s; }
 let allQs = [];
 let currentSubject = "全部";
 let eyeState = {};
@@ -29,7 +30,7 @@ function sortNewToOld(qs){
 }
 function renderPills(){
   const el = document.getElementById("pills");
-  el.innerHTML = SUBJECTS.map(s => "<button type='button' class='bank-pill" + (s === currentSubject ? " active" : "") + "' data-s='" + s + "'>" + s + "</button>").join("");
+  el.innerHTML = dynamicSubjects().map(s => "<button type='button' class='bank-pill" + (s === currentSubject ? " active" : "") + "' data-s='" + s + "'>" + s + "</button>").join("");
   el.querySelectorAll(".bank-pill").forEach(btn => {
     btn.onclick = () => { currentSubject = btn.dataset.s; render(); };
   });
@@ -49,6 +50,7 @@ async function render(){
   await PWQ.ready();
   if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录，登录后这里才会显示你在云端的错题。</p>"; return; }
   allQs = sortNewToOld(PWQ.getQuestions());
+  if (currentSubject !== "全部" && !allQs.some(q => (q.subject || "其他") === currentSubject)) currentSubject = "全部";
   renderPills();
   const list = document.getElementById("list");
   list.innerHTML = "";
@@ -60,58 +62,87 @@ async function render(){
   filtered.forEach(q => {
     const d = document.createElement("div");
     d.className = "qitem" + (q.mastered ? " mastered" : "");
-    const isQual = q.type === "定性辨析类";
-    const optsHtml = q.options.map(o => {
-      const letter = o.trim().charAt(0);
-      const isAns = letter === q.answer;
-      const exp = isQual ? optionExplain(q, letter) : "";
-      const eyeId = q.id + "_" + letter;
-      const shown = !!eyeState[eyeId];
-      return "<div class='opt " + (isAns ? "correct" : "") + "'><span>" + PWQ.escapeHtml(o) + "</span>" + (isAns ? "<span class='mark'>正确答案</span>" : "") + "</div>" +
-        (isQual ? "<div class='opt-explain'><span class='opt-q'>选项解析：</span><span class='opt-a " + (shown ? "" : "hidden") + "' data-exp='" + eyeId + "'>" + PWQ.escapeHtml(exp || q.explain || "") + "</span><button type='button' class='eye-btn' data-eye='" + eyeId + "' title='点一下显示，再点一下隐藏'>" + (shown ? "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z'/><circle cx='12' cy='12' r='3'/></svg>" : "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z'/><circle cx='12' cy='12' r='3'/></svg>") + "</button></div>" : "");
-    }).join("");
+    const cstDate = q.created_at ? new Date(new Date(q.created_at).getTime() + 8*60*60*1000).toISOString().slice(0,10) : "";
+    const preview = q.stem.length > 60 ? q.stem.slice(0,60) + "…" : q.stem;
     d.innerHTML =
-      "<button type='button' class='star-btn " + (q.starred ? "on" : "") + "' title='点亮收藏到易错题，再点取消'>★</button>" +
-      "<p style='padding-right:28px'><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span>" +
+      "<p><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span>" +
       (q.qkind ? "<span class='tag'>" + PWQ.escapeHtml(q.qkind) + "</span>" : "") +
       "<span class='tag'>" + PWQ.escapeHtml(q.type || "") + "</span>" +
-      (q.mastered ? "<span class='tag'>已经会了</span>" : "") +
-      (q.edited ? "<span class='tag'>手动改过</span>" : "") + "</p>" +
-      "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
-      optsHtml +
-      "<p>正确答案：" + PWQ.escapeHtml(q.answer) + "</p>" +
-      (isQual ? "" : "<p>解析：" + PWQ.escapeHtml(q.explain) + "</p>");
-    // 星星：点亮收藏到易错题，再点取消，星星特别小（22px，见 CSS）
-    d.querySelector(".star-btn").onclick = async () => {
-      q.starred = !q.starred;
-      try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); }
-      render();
-    };
-    // 小眼睛：睁开显示，再点闭上隐藏
-    d.querySelectorAll(".eye-btn").forEach(btn => {
-      btn.onclick = () => {
-        const id = btn.dataset.eye;
-        eyeState[id] = !eyeState[id];
-        const span = d.querySelector("[data-exp='" + id + "']");
-        if (span) span.classList.toggle("hidden", !eyeState[id]);
-      };
-    });
-    const del = document.createElement("button");
-    del.className = "ghost"; del.textContent = "删除这道题";
-    del.onclick = async () => {
-      if (!confirm("确定删除这道题吗？云端也会删掉。")) return;
-      await PWQ.deleteQuestion(q.id); render();
-    };
-    const edit = document.createElement("button");
-    edit.className = "secondary"; edit.textContent = "改解析";
-    edit.onclick = async () => {
+      (cstDate ? "<span class='tag'>" + cstDate + "</span>" : "") + "</p>" +
+      "<p><b>" + PWQ.escapeHtml(preview) + "</b></p>" +
+      "<p><button type='button' class='viewBtn'>查看解析</button> <button type='button' class='secondary editBtn'>改解析</button> <button type='button' class='ghost delBtn'>删除</button></p>";
+    d.querySelector(".viewBtn").onclick = () => openAnalysis(q);
+    d.querySelector(".editBtn").onclick = async () => {
       const ne = prompt("改解析（改过的会标手动改过、不锁定，还能再改）：", q.explain);
       if (ne !== null) { q.explain = ne; q.edited = true; try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); } render(); }
     };
-    d.append(edit, del);
+    d.querySelector(".delBtn").onclick = async () => {
+      if (!confirm("确定删除这道题吗？云端也会删掉。")) return;
+      await PWQ.deleteQuestion(q.id); render();
+    };
     list.appendChild(d);
   });
 }
+function openAnalysis(q){
+  const sheet = document.getElementById("kpSheet");
+  const body = document.getElementById("kpBody");
+  const backdrop = document.getElementById("kpBackdrop");
+  const isQual = q.type === "定性辨析类";
+  let html = "<h2>题目解析</h2>" +
+    "<p><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span><span class='tag'>" + PWQ.escapeHtml(q.qkind || "") + "</span></p>" +
+    "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>";
+  if (isQual) {
+    // 知识辨析型：选项逐项解析，每个选项独立知识点 + 小星标
+    const kps = PWQ.extractKnowledgePoints(q);
+    html += q.options.map(o => {
+      const letter = o.trim().charAt(0);
+      const isAns = letter === q.answer;
+      const kp = kps.find(k => k.name === o.replace(/^[A-D][\.、．：:]\s*/, "").trim().slice(0,24)) || kps[0];
+      const kpIdVal = kp ? kp.id : PWQ.kpId(q.subject, o);
+      const fav = PWQ.isKnowledgeFavorited(kpIdVal);
+      const exp = optionExplain(q, letter);
+      return "<div class='qitem'><p><b>" + PWQ.escapeHtml(o) + "</b> " + (isAns ? "<span class='mark'>正确答案</span>" : "<span class='mark'>错误选项</span>") + "</p>" +
+        "<p>判断结果：" + (isAns ? "正确" : "错误") + "</p>" +
+        "<p>选项解析：" + PWQ.escapeHtml(exp || q.explain || "") + "</p>" +
+        "<p>对应知识点：" + PWQ.escapeHtml(kp ? kp.name : o) + " <button type='button' class='kp-star " + (fav ? "on" : "") + "' data-kp='" + PWQ.escapeHtml(kpIdVal) + "' data-name='" + PWQ.escapeHtml(kp ? kp.name : o) + "'>★</button></p></div>";
+    }).join("");
+  } else {
+    // 计算型：统一解析区，不机械地为每个选项建知识点讲解
+    html += "<p>正确答案：" + PWQ.escapeHtml(q.answer) + "</p>" +
+      "<p>解题思路：见下面详细步骤。</p>" +
+      "<p>详细计算步骤：</p><p>" + PWQ.escapeHtml(q.explain || "") + "</p>" +
+      "<p>最终结论：正确答案是 " + PWQ.escapeHtml(q.answer) + "。</p>" +
+      "<p>核心公式或知识点：见解析中的公式与概念，点下面星标可收藏本题知识点。</p>";
+    const kps = PWQ.extractKnowledgePoints(q);
+    if (kps.length) {
+      const kp = kps[0];
+      const fav = PWQ.isKnowledgeFavorited(kp.id);
+      html += "<p>知识点：" + PWQ.escapeHtml(kp.name) + " <button type='button' class='kp-star " + (fav ? "on" : "") + "' data-kp='" + PWQ.escapeHtml(kp.id) + "' data-name='" + PWQ.escapeHtml(kp.name) + "'>★</button></p>";
+    }
+    if (q.options && q.options.length) {
+      html += q.options.map(o => "<div class='opt " + (o.trim().charAt(0) === q.answer ? "correct" : "") + "'><span>" + PWQ.escapeHtml(o) + "</span>" + (o.trim().charAt(0) === q.answer ? "<span class='mark'>正确答案</span>" : "") + "</div>").join("");
+    }
+  }
+  body.innerHTML = html;
+  body.querySelectorAll(".kp-star").forEach(btn => {
+    btn.onclick = () => {
+      const kp = {id: btn.dataset.kp, name: btn.dataset.name, subject: q.subject || "其他", summary: "", detail: q.explain || "", questionIds: [q.id]};
+      const fav = PWQ.toggleKnowledgePoint(kp);
+      if (fav) PWQ.linkKnowledgeToQuestion(kp.id, q.id);
+      btn.classList.toggle("on", fav);
+      PWQ.toast(fav ? "已收藏到知识点。" : "已取消收藏。");
+    };
+  });
+  sheet.classList.add("open");
+  backdrop.classList.add("show");
+  try { history.pushState({kpSheet: true}, ""); } catch(e) {}
+}
+document.getElementById("kpClose").onclick = () => { document.getElementById("kpSheet").classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); };
+document.getElementById("kpBackdrop").onclick = () => { document.getElementById("kpSheet").classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); };
+window.addEventListener("popstate", () => {
+  const sheet = document.getElementById("kpSheet");
+  if (sheet && sheet.classList.contains("open")) { sheet.classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); }
+});
 document.getElementById("dedupBtn").onclick = async () => {
   await PWQ.ready();
   if (!PWQ.currentUser()) { PWQ.toast("请先登录。"); return; }

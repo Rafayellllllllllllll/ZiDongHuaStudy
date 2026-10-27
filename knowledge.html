@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>拍照错题本 · 知识点</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script></head><body>
+<main>
+<div class="card"><h1>知识点</h1>
+<p class="small">收藏的知识点都在这里。</p>
+<p><button type="button" class="secondary" id="searchBtn">搜索</button></p>
+<div id="searchBox" class="hidden"><input id="searchInput" placeholder="按知识点名称搜索"><button type="button" class="secondary" id="clearSearch">清除搜索</button></div>
+<div id="pills" class="pills-scroll"></div>
+<p id="countText" class="small"></p>
+<div id="list"></div>
+<div id="empty" class="hidden"><p>还没有收藏知识点</p><p class="small">在错题解析中点击知识点旁边的星标，就能将知识点收集到这里。</p><p><a class="btn" href="bank.html">去错题本</a></p></div>
+</div>
+</main>
+<div class="zyb-backdrop" id="kpBackdrop"></div>
+<section class="kp-sheet" id="kpSheet"><div class="zyb-grab"></div><button type="button" class="zyb-close" id="kpClose">×</button><div class="kp-sheet-body" id="kpBody"></div></section>
+<nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html">统计</a><a href="index.html?account=1">我的</a></nav>
+<script>
+let currentSubject = "全部";
+let searchText = "";
+function render(){
+  const all = PWQ.getKnowledgePoints();
+  const subjects = ["全部"];
+  all.forEach(k => { if (!subjects.includes(k.subject)) subjects.push(k.subject); });
+  if (currentSubject !== "全部" && !subjects.includes(currentSubject)) currentSubject = "全部";
+  const pills = document.getElementById("pills");
+  pills.innerHTML = subjects.map(s => "<button type='button' class='bank-pill" + (s === currentSubject ? " active" : "") + "' data-s='" + s + "'>" + s + "</button>").join("");
+  pills.querySelectorAll(".bank-pill").forEach(btn => { btn.onclick = () => { currentSubject = btn.dataset.s; render(); }; });
+  let filtered = all.filter(k => (currentSubject === "全部" || k.subject === currentSubject) && (!searchText || k.name.includes(searchText)));
+  document.getElementById("countText").textContent = "已收藏 " + filtered.length + " 个知识点";
+  const list = document.getElementById("list");
+  const empty = document.getElementById("empty");
+  list.innerHTML = "";
+  if (!all.length) { empty.classList.remove("hidden"); empty.querySelector("p").textContent = "还没有收藏知识点"; return; }
+  if (!filtered.length) {
+    empty.classList.remove("hidden");
+    empty.querySelector("p").textContent = searchText ? "没有找到相关知识点" : "这个学科下还没有知识点";
+    return;
+  }
+  empty.classList.add("hidden");
+  filtered.forEach(k => {
+    const d = document.createElement("div");
+    d.className = "kp-card";
+    d.innerHTML = "<button type='button' class='kp-star on' style='position:absolute;top:12px;right:12px' title='点一下取消收藏'>★</button>" +
+      "<div class='kp-name'>" + PWQ.escapeHtml(k.name) + "</div>" +
+      "<div class='kp-sub'>" + PWQ.escapeHtml(k.subject) + (k.chapter ? " · " + PWQ.escapeHtml(k.chapter) : "") + "</div>" +
+      "<div class='kp-summary'>" + PWQ.escapeHtml(k.summary || k.detail || "") + "</div>" +
+      "<p><button type='button' class='secondary detailBtn'>查看详情</button></p>";
+    d.style.position = "relative";
+    d.querySelector(".kp-star").onclick = (e) => { e.stopPropagation(); PWQ.toggleKnowledgePoint(k); render(); };
+    d.querySelector(".detailBtn").onclick = () => openDetail(k);
+    d.onclick = (e) => { if (e.target.closest(".kp-star")) return; openDetail(k); };
+    list.appendChild(d);
+  });
+}
+function openDetail(k){
+  const sheet = document.getElementById("kpSheet");
+  const body = document.getElementById("kpBody");
+  const qs = PWQ.getQuestions().filter(q => (k.questionIds || []).includes(q.id));
+  body.innerHTML = "<h2>" + PWQ.escapeHtml(k.name) + "</h2>" +
+    "<p class='small'>" + PWQ.escapeHtml(k.subject) + (k.chapter ? " · " + PWQ.escapeHtml(k.chapter) : "") + "</p>" +
+    "<p>" + PWQ.escapeHtml(k.detail || k.summary || "") + "</p>" +
+    "<p><button type='button' class='kp-star on' id='detailStar'>★ 取消收藏</button></p>" +
+    "<h3>关联错题</h3>" +
+    (qs.length ? qs.map(q => "<div class='qitem'><p><b>" + PWQ.escapeHtml(q.stem) + "</b></p><p><a class='btn secondary' href='bank.html'>去错题本看解析</a></p></div>").join("") : "<p class='small'>暂无关联错题。</p>");
+  body.querySelector("#detailStar").onclick = () => { PWQ.toggleKnowledgePoint(k); sheet.classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); render(); };
+  sheet.classList.add("open");
+  document.getElementById("kpBackdrop").classList.add("show");
+}
+document.getElementById("searchBtn").onclick = () => { document.getElementById("searchBox").classList.toggle("hidden"); document.getElementById("searchInput").focus(); };
+document.getElementById("searchInput").addEventListener("input", (e) => { searchText = e.target.value.trim(); render(); });
+document.getElementById("clearSearch").onclick = () => { searchText = ""; document.getElementById("searchInput").value = ""; render(); };
+document.getElementById("kpClose").onclick = () => { document.getElementById("kpSheet").classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); };
+document.getElementById("kpBackdrop").onclick = () => { document.getElementById("kpSheet").classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); };
+(async () => { await PWQ.ready(); if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录。</p>"; return; } render(); })();
+</script>
+</body></html>
