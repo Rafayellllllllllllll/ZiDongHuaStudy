@@ -76,8 +76,8 @@ function renderBoxes(){
     d.className = "zyb-box" + (b.selected ? " zyb-selected" : "");
     d.style.left = b.x + "%"; d.style.top = b.y + "%";
     d.style.width = b.w + "%"; d.style.height = b.h + "%";
-    const numLabel = b.selected ? String(b.selOrder || "") : String(i+1);
-    d.innerHTML = "<span class=\"zyb-num\">" + numLabel + "</span><div class=\"zyb-del\" title=\"删掉这个框\">×</div><div class=\"zyb-handle\" title=\"拖这个圆点调宽和高\"></div>";
+    const numLabel = b.selected ? String(b.selOrder || (i+1)) : String(i+1);
+    d.innerHTML = "<span class=\"zyb-num\">" + numLabel + "</span><div class=\"zyb-del\" title=\"删掉这个框\">×</div><div class=\"zyb-handle\" title=\"拖这个圆点调宽和高\">↩</div>";
     let mode = null, startX = 0, startY = 0, orig = null;
     const posOf = (e) => {
       const r = stage.getBoundingClientRect();
