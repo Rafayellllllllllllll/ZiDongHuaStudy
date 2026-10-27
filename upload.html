@@ -34,7 +34,7 @@
 <p><button id="recognize">识别所选题目</button></p>
 <div id="unclear" class="warn hidden">识别不清楚或不确定：请重新拍一下再录。建议光线亮一点、拍正一点、离近一点、不要抖。拍清楚了才能录，不能悄悄录不清楚的题。</div>
 <div id="proof" class="hidden">
-<p class="small">选了几道题，下面就从上往下排几个小方框，一个方框就是一道题：上面是题目，中间是选项，下面是解析。正确答案会用绿色标出来，你先确认答案对不对，再点保存。</p>
+<p class="small">选了几道题，下面就从上往下排几个小方框，一个方框就是一道题：上面是题目，中间是选项，下面是解析，正确答案绿色标出。编辑用的“题目、选项、正确答案”这些输入框默认是藏起来的，不会跟题目卡片混在一起，想改再点右上角“编辑”。</p>
 <div id="proofList"></div>
 <p><button id="saveAll">确认无误，全部保存到错题库</button></p>
 <p class="small">视觉识别：已换成能看图的 DeepSeek 模型（deepseek-flash），点“识别”会把每个选中框裁出来发给模型读题干、选项和正确答案，自动填进各自的小方框；读不出来时再手动输入。照片只临时发给模型看一次，不存云端。</p>
@@ -257,16 +257,22 @@ document.getElementById("recognize").onclick = async () => {
   cards.forEach((c, ci) => {
     const div = document.createElement("div");
     div.className = "qitem";
-    div.innerHTML = "<p><b>第 " + (ci+1) + " 题</b> <span class='tag'>" + PWQ.escapeHtml(c.subject) + "</span></p>" +
+    div.innerHTML = "<p><b>第 " + (ci+1) + " 题</b> <span class='tag'>" + PWQ.escapeHtml(c.subject) + "</span> <button class='secondary editBtn' style='float:right'>编辑</button></p>" +
+      "<div class='view'>" +
+      "<p class='stemView'><b>" + PWQ.escapeHtml(c.stem) + "</b></p>" +
+      "<div class='opt-preview'></div>" +
+      "<div class='explain hidden'><b>红笔解析：</b><span data-f='explainText'></span></div>" +
+      "</div>" +
+      "<div class='edit hidden'>" +
       "<label>题目</label><textarea rows='3' data-f='stem'>" + PWQ.escapeHtml(c.stem) + "</textarea>" +
       "<label>选项（一行一个）</label><textarea rows='4' data-f='options'>" + PWQ.escapeHtml(c.options.join("\n")) + "</textarea>" +
       "<label>正确答案（模型推断的，先确认，再生成解析）</label><select data-f='answer'><option" + (c.answer==="A"?" selected":"") + ">A</option><option" + (c.answer==="B"?" selected":"") + ">B</option><option" + (c.answer==="C"?" selected":"") + ">C</option><option" + (c.answer==="D"?" selected":"") + ">D</option></select>" +
-      "<div class='opt-preview'></div>" +
       "<label>学科</label><select data-f='subject'><option>语文</option><option>数学</option><option>政治</option><option>物理</option><option>计算机</option><option>其他</option></select>" +
       "<label>大题型</label><select data-f='qkind'><option>选择题</option><option>判断题</option><option>主观题</option></select>" +
       "<label>解析类型</label><select data-f='type'><option>定量计算类</option><option>定性辨析类</option></select>" +
       "<label>错因标签</label><select data-f='reason'><option>粗心</option><option>概念不清</option><option>计算错</option><option>没见过</option></select>" +
-      "<div class='explain hidden'><b>红笔解析：</b><span data-f='explainText'></span></div>";
+      "<p><button class='secondary doneBtn'>改好了，回到题目卡片</button></p>" +
+      "</div>";
     div.querySelector("[data-f='subject']").value = c.subject;
     div.querySelector("[data-f='qkind']").value = c.qkind;
     div.querySelector("[data-f='type']").value = c.type;
@@ -274,6 +280,8 @@ document.getElementById("recognize").onclick = async () => {
     const renderPreview = () => {
       const opts = div.querySelector("[data-f='options']").value.split("\n").filter(Boolean);
       const ans = div.querySelector("[data-f='answer']").value;
+      div.querySelector(".stemView").innerHTML = "<b>" + PWQ.escapeHtml(div.querySelector("[data-f='stem']").value) + "</b>";
+      div.querySelector(".tag").textContent = div.querySelector("[data-f='subject']").value;
       div.querySelector(".opt-preview").innerHTML = opts.map(o => {
         const letter = o.trim().charAt(0);
         const isAns = letter === ans;
@@ -283,6 +291,17 @@ document.getElementById("recognize").onclick = async () => {
     div.querySelector("[data-f='options']").addEventListener("input", renderPreview);
     div.querySelector("[data-f='answer']").addEventListener("change", renderPreview);
     renderPreview();
+    div.querySelector("[data-f='stem']").addEventListener("input", renderPreview);
+    div.querySelector("[data-f='subject']").addEventListener("change", renderPreview);
+    div.querySelector(".editBtn").onclick = () => {
+      div.querySelector(".view").classList.add("hidden");
+      div.querySelector(".edit").classList.remove("hidden");
+    };
+    div.querySelector(".doneBtn").onclick = () => {
+      renderPreview();
+      div.querySelector(".edit").classList.add("hidden");
+      div.querySelector(".view").classList.remove("hidden");
+    };
     list.appendChild(div);
   });
   document.getElementById("unclear").classList.add("hidden");
