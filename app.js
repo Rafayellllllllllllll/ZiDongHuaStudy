@@ -180,6 +180,14 @@ async function signOutAll(){
 }
 async function addQuestion(q){
   if (!_profile) throw new Error("请先登录。");
+  // 防重复：同一题干 + 同一答案，10 秒内只存一次，手抖多点也不会存多条。
+  const key = String(q.stem || "").trim() + "|" + String(q.answer || "").trim();
+  const now = Date.now();
+  if (!window._lastSaved) window._lastSaved = {};
+  if (window._lastSaved[key] && now - window._lastSaved[key] < 10000) {
+    throw new Error("这道题已经保存过了，不会重复存。");
+  }
+  window._lastSaved[key] = now;
   const { data, error } = await window.supabaseClient.from("questions").insert(toCloud(q, _profile.id)).select().single();
   if (error) throw new Error("保存到云端失败：" + error.message);
   const local = toLocal(data);

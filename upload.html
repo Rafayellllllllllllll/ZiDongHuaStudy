@@ -280,14 +280,18 @@ function renderSheet(){
   }
   const saveBtn = body.querySelector("#sheetSaveOne");
   if (saveBtn) {
+    if (c.saved) { saveBtn.textContent = "这道题已经保存过了"; saveBtn.disabled = true; }
     saveBtn.onclick = async () => {
+      if (c.saved || c.saving) { PWQ.toast("这道题已经保存过了，不会重复存。"); return; }
+      c.saving = true; saveBtn.disabled = true; saveBtn.textContent = "正在保存…";
       await PWQ.ready();
-      if (!PWQ.currentUser()) { PWQ.toast("请先去登录页登录，登录后才能把题存到云端。"); location.href = "index.html"; return; }
+      if (!PWQ.currentUser()) { c.saving = false; saveBtn.disabled = false; saveBtn.textContent = "生成解析并保存这道题"; PWQ.toast("请先去登录页登录，登录后才能把题存到云端。"); location.href = "index.html"; return; }
       const batch = "未分组";
       const q = { subject: c.subject, qkind: c.qkind, type: c.type, stem: c.stem, options: c.options, answer: c.answer, explain: "", reason: "", batch: batch, starred:false, mastered:false, streak:0, edited:false, note:"" };
       q.explain = await PWQ.explainPlaceholder({stem: q.stem, options: q.options, answer: q.answer, type: q.type});
       c.explain = q.explain;
-      try { await PWQ.addQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); return; }
+      try { await PWQ.addQuestion(q); } catch(e) { c.saving = false; if (String(e.message || e).includes("已经保存过了")) c.saved = true; PWQ.toast(String(e.message || e)); renderSheet(); return; }
+      c.saved = true; c.saving = false;
       PWQ.toast("这道题已保存到云端错题库。");
       renderSheet();
     };
@@ -385,6 +389,41 @@ document.getElementById("zybBackdrop").onclick = closeSheet;
   grab.addEventListener("pointerup", endDrag);
   grab.addEventListener("pointercancel", endDrag);
 })();
+
+// 右滑返回（从屏幕右侧向左滑，Android 手势返回）：先在网站里退一步，不直接退出到浏览器主页。
+// 原理：解析面板打开时压一条历史记录，返回先收起面板；面板没开时，上传页返回先回主页；主页再返回才真的退出。
+let backSheetOpen = false;
+const origOpenSheet = openSheet;
+const origCloseSheet = closeSheet;
+openSheet = function(mode){
+  origOpenSheet(mode);
+  if (!backSheetOpen) {
+    backSheetOpen = true;
+    try { history.pushState({zybSheet: true}, ""); } catch(e) {}
+  }
+};
+closeSheet = function(){
+  origCloseSheet();
+  if (backSheetOpen) {
+    backSheetOpen = false;
+    // 如果当前历史就是我们压的那条，返回时不要再触发一次 popstate 循环
+    // 这里不主动 history.back，由 popstate 处理；直接关面板即可。
+  }
+};
+window.addEventListener("popstate", () => {
+  const sheet = document.getElementById("zybSheet");
+  if (sheet && (sheet.classList.contains("open") || sheet.classList.contains("peek"))) {
+    backSheetOpen = false;
+    origCloseSheet();
+    return;
+  }
+  // 面板没开，上传页右滑返回：先回主页，不直接退出到浏览器主页
+  if (location.pathname.endsWith("upload.html") || location.pathname.endsWith("/upload.html")) {
+    location.href = "home.html";
+  }
+});
+// 进入上传页时压一条历史，这样第一次右滑返回会先触发 popstate 回主页，而不是直接退出。
+try { history.pushState({zybUpload: true}, ""); } catch(e) {}
 // 点开这一页就直接是全屏相机，不用再点一次拍照按钮。
 startCamera();
 window.addEventListener("beforeunload", stopCamera);
