@@ -45,7 +45,7 @@ async function render(){
         "<span class='tag'>" + PWQ.escapeHtml(q.batch) + "</span>" +
         (q.mastered ? "<span class='tag pink'>已经会了</span>" : "") +
         (q.edited ? "<span class='tag'>手动改过</span>" : "") +
-        (q.starred ? "<span class='tag'>★已收藏</span>" : "") + "</p>" +
+        (q.starred ? "<span class='tag'>已收藏</span>" : "") + "</p>" +
         "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
         "<p>" + q.options.map(o => PWQ.escapeHtml(o)).join("<br>") + "</p>" +
         "<p>正确答案：" + PWQ.escapeHtml(q.answer) + "（练习时答前不显示，答完才显示）</p>" +
@@ -80,5 +80,5 @@ async function render(){
   document.getElementById(id).addEventListener("change", render));
 render();
 </script>
-<nav class="bottomnav"><a href="home.html">🏠<br>主页</a><a href="bank.html">📊<br>统计</a><a href="index.html?account=1">👤<br>我的</a></nav>
+<nav class="bottomnav"><a href="home.html">主页</a><a href="bank.html">统计</a><a href="index.html?account=1">我的</a></nav>
 </body></html>
