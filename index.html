@@ -10,7 +10,7 @@
 <title>拍照错题本 · 登录</title>
 <link rel="stylesheet" href="styles.css">
 <style>.my-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-js.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card hidden" id="myCard"><div class="my-profile"><div class="my-avatar" id="myAvatar">我</div><div class="my-name" id="myName"></div><div class="my-email" id="myEmail"></div><p><button type="button" class="secondary" id="myChangeAvatarBtn">更改头像</button><input type="file" id="myAvatarFile" accept="image/*" style="display:none"></p><p id="myAdminLink" class="hidden"><a class="btn secondary" href="admin.html">管理</a></p><p><button type="button" id="myLogoutBtn">退出登录</button></p><p><button type="button" class="secondary" id="myLogoutAllBtn">退出所有设备</button></p><p class="small">退出后才会重新出现登录界面。</p></div></div>

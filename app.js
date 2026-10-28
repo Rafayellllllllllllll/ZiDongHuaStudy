@@ -193,7 +193,7 @@ function getNotes(){ return _notesCache ? [..._notesCache] : []; }
 async function signInOrUp(username, password, email){
   username = String(username).trim();
   if (!username || !password) throw new Error("请填账号和密码。");
-  if (!window.supabaseClient) throw new Error("未配置 Supabase，无法登录。");
+  if (!window.supabaseClient) throw new Error(configured ? "Supabase 脚本没加载出来，请用系统浏览器打开、刷新一次再试，不要在抖音/微信内置浏览器里打开。" : "未配置 Supabase，无法登录。");
   const auth_email = authEmail(username);
   // 先试登录
   let res = await window.supabaseClient.auth.signInWithPassword({ email: auth_email, password });
