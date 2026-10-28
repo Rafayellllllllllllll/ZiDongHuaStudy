@@ -257,3 +257,15 @@ main.zyb-full{padding-bottom:80px}
 /* 主页底栏加高：原来上下只有 8-10px，点起来窄；现在上下 16-20px、字 15px，点击区更宽更好点 */
 .bottomnav{padding:16px 0 calc(20px + env(safe-area-inset-bottom))}
 .bottomnav a{font-size:15px;padding:6px 8px}
+
+/* 拍照多页：相机下方选单页/多页，右下角确认进框选；框选时按页切换 */
+.cam-mode{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 16px;background:rgba(0,0,0,.55);color:#fff}
+.cam-mode-btns{display:flex;gap:8px}
+.cam-mode-btns button{padding:8px 14px;font-size:13px;font-weight:700;border-radius:999px;border:1px solid #fff;background:transparent;color:#fff;margin:0}
+.cam-mode-btns button.active{background:var(--primary);border-color:var(--primary)}
+.cam-pages{font-size:13px;white-space:nowrap}
+.cam-confirm{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:#fff;color:var(--ink);font-size:14px;font-weight:700}
+.cam-confirm button{margin:0;padding:12px 18px;font-size:15px;font-weight:800}
+.page-switcher{display:flex;align-items:center;gap:8px;padding:8px 16px}
+.page-switcher button{margin:0;padding:8px 12px;font-size:13px}
+.page-switcher span{font-size:14px;font-weight:700;flex:1;text-align:center}

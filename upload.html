@@ -15,15 +15,21 @@
 <div class="camscreen" id="camScreen">
 <div class="cam-top"><a href="home.html">← 回主页</a><span class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</span></div>
 <video id="camVideo" autoplay playsinline muted></video>
+<div class="cam-mode" id="camModeBar">
+<div class="cam-mode-btns"><button type="button" id="modeSingle" class="active">拍一页</button><button type="button" id="modeMulti">拍多页</button></div>
+<span id="camPagesText" class="cam-pages">多页：已拍 0 / 5 页</span>
+</div>
 <div class="cam-controls">
 <button type="button" class="switch-btn" id="switchCam">换摄像头</button>
 <button type="button" class="shoot-btn" id="shootBtn">拍照</button>
 <label class="album-btn" title="打开相册，选已有照片">相册<input type="file" accept="image/*" id="file" class="hidden"></label>
 </div>
+<div class="cam-confirm" id="camConfirmRow" style="display:none"><span id="camConfirmText">已拍 0 页</span><button type="button" id="confirmPagesBtn">确认 → 框选题目</button></div>
 </div>
 <canvas id="camCanvas" class="hidden"></canvas>
 <main class="zyb-page zyb-full">
 <input type="file" accept="image/*" capture="environment" id="camera" class="hidden">
+<div id="pageSwitcher" class="page-switcher hidden"><button type="button" id="prevPageBtn">← 上一页</button><span id="pageIndicator">第 1 / 1 页</span><button type="button" id="nextPageBtn">下一页 →</button><button type="button" class="secondary" id="delPageBtn">删掉这页</button></div>
 <div class="zyb-stage-wrap"><div class="zyb-stage" id="stage"><p style="padding:20px;line-height:1.6">还没选照片。拍完或从相册选完后，照片会在这里按原宽高比满宽显示，不裁剪、不拉伸。</p></div></div>
 <p style="margin:0;padding:8px 16px 0"><button type="button" class="secondary" id="addBox" style="margin-top:0">手动补框：在照片上拖一下，框出没框住的题</button>
 <button type="button" class="secondary" id="retakeBtn2" style="margin-top:0">重新拍摄</button>
@@ -42,6 +48,9 @@
 </section>
 <script>
 let boxes = [];
+let multiMode = false;
+let photoPages = [];
+let currentPageIndex = 0;
 let currentPhotoFile = null;
 let currentPhotoDataUrl = "";
 let camStream = null;
@@ -69,6 +78,11 @@ function stopCamera(){
 }
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
 function updateBar(){
+  if (multiMode && photoPages.length) {
+    const total = photoPages.reduce((s, pg) => s + pg.boxes.filter(b => b.selected).length, 0);
+    document.getElementById("zybCount").textContent = "已选 " + total + " 道";
+    return;
+  }
   const sel = boxes.filter(b => b.selected);
   document.getElementById("zybCount").textContent = "已选 " + sel.length + " 道";
 }
@@ -169,58 +183,101 @@ async function showImage(file){
   renderBoxes();
   stopCamera();
   document.getElementById("stage").scrollIntoView({behavior:"smooth"});
-  document.getElementById("ocrNote").textContent = "正在试智能框选…如果一会儿没出框，说明这次没认出题号，请直接在照片上拖一下手动框选，不要等。";
-  // 智能框选：本机文字识别找题号。上一版在数学题、横拍照片上经常认不出，
-  // 这次改成：认不出就直接说认不出，不再给固定假框，手动框选才是兜底。
-  try {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-    document.head.appendChild(script);
-    await new Promise((res, rej) => { script.onload = res; script.onerror = rej; });
-    const worker = await Tesseract.createWorker("chi_sim+eng");
-    const result = await worker.recognize(file);
-    await worker.terminate();
-    const words = (result.data.words || []).filter(w => w && w.bbox);
-    const starts = [];
-    for (const w of words) {
-      const txt = (w.text || "").trim();
-      const m = txt.match(/^(\d{1,2})[\.、．]/) || txt.match(/^第(\d{1,2})题/);
-      if (m) starts.push({ n: parseInt(m[1], 10), x0: w.bbox.x0, y0: w.bbox.y0 });
-    }
-    starts.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
-    const img = document.getElementById("photo");
-    const H = img.naturalHeight || 1000;
-    if (starts.length >= 1) {
-      for (let i = 0; i < starts.length; i++) {
-        const s = starts[i];
-        const next = starts[i+1];
-        const yTop = Math.max(0, s.y0 - 8);
-        const yBottom = next ? Math.max(yTop + 20, next.y0 - 8) : H;
-        boxes.push({ x: 2, y: yTop / H * 100, w: 96, h: (yBottom - yTop) / H * 100, selected: false, selOrder: 0, label: "第 " + s.n + " 题" });
-      }
-      renderBoxes();
-      document.getElementById("ocrNote").textContent = "智能框选出 " + boxes.length + " 道题，框不准就拖右下角圆点调宽和高，或拖框身移动。";
-    } else {
-      document.getElementById("ocrNote").textContent = "这次没认出题号（数学符号、横拍、手写遮题号都容易认不出），请直接在照片上拖一下手动框选，框好再点框选错题。";
-    }
-  } catch(e) {
-    document.getElementById("ocrNote").textContent = "智能框选没跑起来（可能是网络或识别失败），请直接在照片上拖一下手动框选，框好再点框选错题。";
-  }
+  document.getElementById("ocrNote").textContent = "自动框选已取消，只手动选：在照片上拖一下框出题目，点框是选 / 取消选，框不准拖框身移动、拖右下角圆点调宽和高。";
 }
 function showImageFromCanvas(){
   const canvas = document.getElementById("camCanvas");
   canvas.width = video.videoWidth || 1280;
   canvas.height = video.videoHeight || 720;
   canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-  canvas.toBlob(blob => { if (blob) showImage(blob); }, "image/jpeg", 0.9);
+  canvas.toBlob(blob => { if (blob) { if (multiMode) addPage(blob); else showImage(blob); } }, "image/jpeg", 0.9);
 }
+
+function updateCamUI(){
+  document.getElementById("modeSingle").classList.toggle("active", !multiMode);
+  document.getElementById("modeMulti").classList.toggle("active", multiMode);
+  const pagesText = document.getElementById("camPagesText");
+  pagesText.style.display = multiMode ? "" : "none";
+  pagesText.textContent = "多页：已拍 " + photoPages.length + " / 5 页";
+  const row = document.getElementById("camConfirmRow");
+  row.style.display = (multiMode && photoPages.length) ? "flex" : "none";
+  document.getElementById("camConfirmText").textContent = "已拍 " + photoPages.length + " 页" + (photoPages.length >= 5 ? "，已满" : "");
+  const shoot = document.getElementById("shootBtn");
+  shoot.disabled = multiMode && photoPages.length >= 5;
+  shoot.style.opacity = shoot.disabled ? "0.5" : "";
+  const sw = document.getElementById("pageSwitcher");
+  if (sw) sw.classList.toggle("hidden", !(multiMode && photoPages.length));
+  const ind = document.getElementById("pageIndicator");
+  if (ind && photoPages.length) ind.textContent = "第 " + (currentPageIndex + 1) + " / " + photoPages.length + " 页";
+}
+function setMode(multi){
+  if (multi === multiMode) return;
+  if (!multi && photoPages.length) {
+    if (!confirm("切回单页会清空已拍的多页照片，确定吗？")) return;
+    photoPages = []; currentPageIndex = 0;
+  }
+  multiMode = multi;
+  if (!multiMode) document.getElementById("pageSwitcher").classList.add("hidden");
+  updateCamUI();
+}
+function addPage(file){
+  if (!file) return;
+  if (photoPages.length >= 5) { PWQ.toast("最多同时拍 5 页，已拍满，点右下角确认进框选。"); updateCamUI(); return; }
+  const url = URL.createObjectURL(file);
+  const reader = new FileReader();
+  reader.onload = () => {
+    photoPages.push({url: url, dataUrl: reader.result, boxes: []});
+    updateCamUI();
+    PWQ.toast("已拍第 " + photoPages.length + " 页" + (photoPages.length >= 5 ? "，已满 5 页，点右下角确认。" : "，还能再拍 " + (5 - photoPages.length) + " 页。"));
+  };
+  reader.readAsDataURL(file);
+}
+function showMultiPage(index){
+  if (!photoPages.length) return;
+  currentPageIndex = Math.max(0, Math.min(photoPages.length - 1, index));
+  const page = photoPages[currentPageIndex];
+  boxes = page.boxes;
+  currentPhotoFile = null;
+  currentPhotoDataUrl = page.dataUrl;
+  stage.innerHTML = '<img id="photo" src="' + page.url + '" alt="第 ' + (currentPageIndex + 1) + ' 页照片">';
+  renderBoxes();
+  document.getElementById("pageSwitcher").classList.remove("hidden");
+  document.getElementById("pageIndicator").textContent = "第 " + (currentPageIndex + 1) + " / " + photoPages.length + " 页";
+  document.getElementById("ocrNote").textContent = "多页手动框选：第 " + (currentPageIndex + 1) + " / " + photoPages.length + " 页，在这页上拖一下框出题目，点框是选 / 取消选；点上一页 / 下一页切换，每页框好的题最后会一起识别。";
+  const stageEl = document.getElementById("stage");
+  if (stageEl && stageEl.scrollIntoView) stageEl.scrollIntoView({behavior:"smooth"});
+}
+document.getElementById("modeSingle").onclick = () => setMode(false);
+document.getElementById("modeMulti").onclick = () => setMode(true);
+document.getElementById("confirmPagesBtn").onclick = () => {
+  if (!photoPages.length) { PWQ.toast("还没拍，先拍至少一页。"); return; }
+  stopCamera();
+  showMultiPage(currentPageIndex < photoPages.length ? currentPageIndex : 0);
+};
+document.getElementById("prevPageBtn").onclick = () => showMultiPage(currentPageIndex - 1);
+document.getElementById("nextPageBtn").onclick = () => showMultiPage(currentPageIndex + 1);
+document.getElementById("delPageBtn").onclick = () => {
+  if (!confirm("删掉这页吗？这页上框好的题也会一起删掉。")) return;
+  photoPages.splice(currentPageIndex, 1);
+  if (!photoPages.length) {
+    boxes = [];
+    stage.innerHTML = '<p style="padding:20px;line-height:1.6">这页已删掉，没有照片了。点“重新拍摄”再拍。</p>';
+    document.getElementById("pageSwitcher").classList.add("hidden");
+    updateCamUI();
+    startCamera();
+    return;
+  }
+  updateCamUI();
+  showMultiPage(Math.min(currentPageIndex, photoPages.length - 1));
+};
+updateCamUI();
 document.getElementById("shootBtn").onclick = showImageFromCanvas;
 document.getElementById("switchCam").onclick = async () => {
   facing = facing === "environment" ? "user" : "environment";
   await startCamera();
 };
-document.getElementById("camera").addEventListener("change", e => showImage(e.target.files[0]));
-document.getElementById("file").addEventListener("change", e => showImage(e.target.files[0]));
+document.getElementById("camera").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (multiMode) addPage(f); else showImage(f); });
+document.getElementById("file").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (multiMode) addPage(f); else showImage(f); });
 document.getElementById("addBox").onclick = () => {
   boxes.push({x:5, y:10 + boxes.length*8, w:90, h:20, selected:false, selOrder:0, label:"手动框 " + (boxes.length+1)});
   renderBoxes();
@@ -305,13 +362,19 @@ function renderSheet(){
   }
 }
 document.getElementById("recognize").onclick = async () => {
-  const sel = boxes.filter(b => b.selected).sort((a,b) => (a.selOrder||0) - (b.selOrder||0));
-  if (!sel.length) {
+  let targets = [];
+  if (multiMode && photoPages.length) {
+    photoPages.forEach((page, pi) => {
+      page.boxes.filter(b => b.selected).sort((a,b) => (a.selOrder||0) - (b.selOrder||0)).forEach(box => targets.push({pageIndex: pi, box: box, dataUrl: page.dataUrl}));
+    });
+  } else {
+    targets = boxes.filter(b => b.selected).sort((a,b) => (a.selOrder||0) - (b.selOrder||0)).map(box => ({pageIndex: -1, box: box, dataUrl: null}));
+  }
+  if (!targets.length) {
     PWQ.toast("请先点方框选至少一道错题。");
     return;
   }
-  const targets = sel;
-  if (!currentPhotoDataUrl) { PWQ.toast("请先拍照或从相册选一张照片。"); return; }
+  if (!multiMode && !currentPhotoDataUrl) { PWQ.toast("请先拍照或从相册选一张照片。"); return; }
   // 先打开抽屉占位，显示正在识别，不用假题目冒充真实识别
   sheetCards = targets.map(() => ({ stem: "正在识别…", options: [], answer: "", subject: "其他", qkind: "选择题", type: "定性辨析类", explain: "" }));
   sheetIndex = 0;
@@ -322,15 +385,19 @@ document.getElementById("recognize").onclick = async () => {
   const img = document.getElementById("photo");
   const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
   const anon = window.APP_CONFIG ? window.APP_CONFIG.SUPABASE_ANON_KEY : "";
-  const cards = await Promise.all(targets.map(async (box) => {
+  const cards = await Promise.all(targets.map(async (target) => { const box = target.box;
     let stem = "", options = [], suggested = "", subject = "其他", qkind = "选择题", explain_type = "定性辨析类";
     try {
       const canvas = document.createElement("canvas");
-      const iw = img.naturalWidth, ih = img.naturalHeight;
+      let cropImg = img;
+      if (target.pageIndex >= 0) {
+        cropImg = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = target.dataUrl; });
+      }
+      const iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
       const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
       const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
       canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
-      canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      canvas.getContext("2d").drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
       const cropDataUrl = canvas.toDataURL("image/jpeg", 0.9);
       const res = await fetch(visionUrl, {
         method: "POST",
