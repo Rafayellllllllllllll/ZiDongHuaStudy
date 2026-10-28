@@ -259,6 +259,12 @@
     }
     function applyKb(){
       var kb = measuredKb();
+      var dbg = document.getElementById('kbDebug');
+      if (dbg) {
+        var vvH = window.visualViewport ? window.visualViewport.height : -1;
+        var vvT = window.visualViewport ? window.visualViewport.offsetTop : -1;
+        dbg.textContent = '调试：内高' + window.innerHeight + ' 可视高' + vvH + ' 偏移' + vvT + ' 键盘估' + kb;
+      }
       // 测不到键盘高度时（有的浏览器键盘是覆盖模式，不报高度），按截图里键盘约占屏幕 42% 估算。
       if (kb < 50) { kb = Math.round(window.innerHeight * 0.42); }
       document.documentElement.style.setProperty('--kb-bottom', kb + 'px');
