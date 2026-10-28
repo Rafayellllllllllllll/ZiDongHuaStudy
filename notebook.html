@@ -67,22 +67,34 @@
     #themeBtn{display:none}
     #moreBtn{display:inline-flex}
   }
-  /* T 点开的格式栏：平时不显示，点 T 后在顶部栏下方临时展开 */
-  .format-bar{flex:0 0 auto;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+  /* T 点开的格式栏：平时不显示，点 T 后在顶部栏下方临时展开，两行紧凑：第一行 4 个颜色圆点，第二行加粗/下划线 */
+  .format-bar{flex:0 0 auto;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
   .format-bar[hidden]{display:none}
-  .format-colors{display:flex;gap:8px;flex-wrap:wrap}
-  .color-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
-  .format-btns{display:flex;gap:4px;flex-wrap:wrap}
-  .format-btns button{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text);font-size:14px;font-weight:700;cursor:pointer}
+  .format-colors{display:flex;gap:14px;flex-wrap:nowrap;align-items:center}
+  .color-dot{width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;padding:0;background:var(--dot-color);transition:box-shadow .15s ease,transform .1s ease;flex:0 0 auto}
+  .color-dot:active{transform:scale(.94)}
+  .color-dot.selected{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--dot-color)}
+  .format-btns{display:flex;gap:8px;flex-wrap:wrap}
+  .format-btns button{padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+  .format-btns button.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
   .title-area{flex:0 0 auto;padding:4px 20px 12px;background:var(--bg)}
   .title-input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:26px;font-weight:700;line-height:1.3;padding:0}
   .title-input::placeholder{color:var(--muted);font-weight:600}
   .meta{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--muted)}
   .meta .sep{width:1px;height:12px;background:var(--line)}
   .editor-area{flex:1 1 auto;min-height:0;overflow-y:auto;padding:4px 20px 20px;background:var(--bg)}
-  .body-input{width:100%;height:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);font-size:17px;line-height:1.75;caret-color:var(--accent)}
-  .body-input::placeholder{color:var(--muted)}
+  .body-input{width:100%;min-height:100%;border:0;outline:0;background:transparent;color:var(--text);font-size:17px;line-height:1.75;caret-color:var(--accent);white-space:pre-wrap;word-break:break-word}
+  .body-input:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none}
   .body-input::selection{background:var(--accent-soft)}
+  .body-input img{max-width:100%;height:auto;border-radius:12px;display:block;margin:8px 0}
+  .body-input [data-color="black"]{color:#000}
+  .body-input [data-color="red"]{color:#d92d20}
+  .body-input [data-color="blue"]{color:#2563eb}
+  .body-input [data-color="green"]{color:#2e7d32}
+  html[data-theme="dark"] .body-input [data-color="black"]{color:#eef1f6}
+  html[data-theme="dark"] .body-input [data-color="red"]{color:#ff7a6b}
+  html[data-theme="dark"] .body-input [data-color="blue"]{color:#7aa5ff}
+  html[data-theme="dark"] .body-input [data-color="green"]{color:#66bb6a}
 </style>
 </head>
 <body>
@@ -110,14 +122,14 @@
       <button class="icon-btn" type="button" id="backBtn" aria-label="返回" title="返回"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
     </div>
     <div class="top-tools">
-      <button class="icon-btn" type="button" aria-label="插入图片" title="插入图片（第7步才接功能）"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-4 4"/></svg></button>
+      <button class="icon-btn" type="button" id="imageBtn" aria-label="插入图片" title="插入图片"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-4 4"/></svg></button>
       <button class="icon-btn" type="button" aria-label="待办清单" title="待办清单（第5步才接功能）"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></button>
       <button class="icon-btn" type="button" id="formatBtn" aria-label="文字格式" title="文字格式"><span class="format-t">T</span></button>
     </div>
     <div class="top-sep" aria-hidden="true"></div>
     <div class="top-right">
-      <button class="icon-btn" type="button" aria-label="撤销" title="撤销（第3步才接功能）" disabled><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
-      <button class="icon-btn" type="button" aria-label="重做" title="重做（第3步才接功能）" disabled><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+      <button class="icon-btn" type="button" id="undoBtn" aria-label="撤销" title="撤销" disabled><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+      <button class="icon-btn" type="button" id="redoBtn" aria-label="重做" title="重做" disabled><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
       <button class="icon-btn accent" type="button" id="completeBtn" aria-label="完成" title="完成并保存"><svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg></button>
       <button class="icon-btn" type="button" id="themeBtn" aria-label="切换浅色深色模式" title="切换浅色 / 深色"><svg class="theme-moon" viewBox="0 0 24 24"><path d="M20 13A8 8 0 0 1 11 4a8 8 0 1 0 9 9z"/></svg><svg class="theme-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M18.4 18.4l-1.4-1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg></button>
       <button class="icon-btn" type="button" id="moreBtn" aria-label="更多" title="更多">⋯</button>
@@ -127,21 +139,16 @@
   <div id="formatBar" class="format-bar" hidden>
     <div class="format-colors" id="formatColors"></div>
     <div class="format-btns">
-      <button type="button" title="加粗（第6步才接功能）"><b>加粗</b></button>
-      <button type="button" title="斜体（第6步才接功能）"><i>斜体</i></button>
-      <button type="button" title="下划线（第6步才接功能）"><u>下划线</u></button>
-      <button type="button" title="大标题（第6步才接功能）">大标题</button>
-      <button type="button" title="中标题（第6步才接功能）">中标题</button>
-      <button type="button" title="小标题（第6步才接功能）">小标题</button>
-      <button type="button" title="无序列表（第6步才接功能）">无序列表</button>
-      <button type="button" title="有序列表（第6步才接功能）">有序列表</button>
+      <button type="button" id="boldBtn" title="加粗"><b>加粗</b></button>
+      <button type="button" id="underlineBtn" title="下划线"><u>下划线</u></button>
     </div>
   </div>
+  <input type="file" id="imageFileInput" accept="image/*" style="display:none" aria-label="选择图片">
   <section class="title-area">
     <input class="title-input" type="text" placeholder="标题" aria-label="标题" id="titleInput">
     <div class="meta"><span id="dateText">10月28日 上午11:27</span><span class="sep" aria-hidden="true"></span><span id="wordCount">0字</span></div>
   </section>
-  <main class="editor-area"><textarea class="body-input" placeholder="开始书写..." aria-label="正文" id="bodyInput"></textarea></main>
+  <main class="editor-area"><div class="body-input" contenteditable="true" data-placeholder="开始书写..." aria-label="正文" id="bodyInput"></div></main>
 </div>
 
 <script>
@@ -179,26 +186,220 @@
   }
   function updateDateTime(){ dateText.textContent = formatDateTime(new Date()); }
   updateDateTime(); setInterval(updateDateTime, 30000);
-  function updateWordCount(){ wordCount.textContent = bodyInput.value.replace(/\s/g, '').length + '字'; }
-  bodyInput.addEventListener('input', updateWordCount);
+  function getBodyPlainText(){
+    var parts = [];
+    function walk(node){
+      if (node.nodeType === 3) { parts.push(node.textContent); return; }
+      if (node.nodeName === 'BR') { parts.push('\n'); return; }
+      if (node.nodeName === 'IMG') return;
+      var isBlock = ['DIV','P','LI'].indexOf(node.nodeName) >= 0;
+      for (var i = 0; i < node.childNodes.length; i++) walk(node.childNodes[i]);
+      if (isBlock) parts.push('\n');
+    }
+    for (var i = 0; i < bodyInput.childNodes.length; i++) walk(bodyInput.childNodes[i]);
+    return parts.join('').replace(/\n+$/, '');
+  }
+  function getBodyImages(){ return Array.prototype.map.call(bodyInput.querySelectorAll('img'), function(img){ return img.src; }).slice(0, 5); }
+  function updateWordCount(){ wordCount.textContent = getBodyPlainText().replace(/\s/g, '').length + '字'; }
+  var editorDirty = false;
+  bodyInput.addEventListener('input', function(){
+    // 空了就清成真正的空，让占位提示重新出现；图片不计字数。
+    if (!getBodyPlainText().trim() && !bodyInput.querySelector('img')) { /* 不在这里清，避免打断光标；占位用 :empty 处理，空行时浏览器会留 <br>，下次打开时仍按空处理 */ }
+    normalizeBodyColors();
+    updateWordCount();
+    editorDirty = true;
+    updateUndoRedoButtons();
+  });
 
-  // T 点开格式栏：平时不显示，点 T 在顶部栏下方临时展开，再点一次或点其他地方收起。
+  // 格式栏（精简版）：第一行 4 个颜色圆点，第二行加粗/下划线两个开关。
+  // 正文区是富文本编辑区（原来是纯文本输入框，纯文本做不到一段文字一个颜色、一段加粗一段不加粗，
+  // 所以底层换成了富文本，外观、字号、行距、占位、字数统计逻辑保持不变）。
+  // 颜色和样式各自独立，可以叠加：红色+加粗、蓝色+下划线都可以；切换颜色不影响加粗/下划线开关，反过来也一样。
+  var FORMAT_COLORS = [
+    { name: 'black', hex: '#000000', label: '黑色' },
+    { name: 'red', hex: '#d92d20', label: '红色' },
+    { name: 'blue', hex: '#2563eb', label: '蓝色' },
+    { name: 'green', hex: '#2e7d32', label: '绿色' }
+  ];
+  var savedRange = null;
+  function saveSelection(){
+    try {
+      var sel = window.getSelection();
+      if (sel.rangeCount && bodyInput.contains(sel.getRangeAt(0).commonAncestorContainer)) savedRange = sel.getRangeAt(0).cloneRange();
+    } catch(e) {}
+  }
+  function restoreSelection(){
+    try {
+      if (savedRange) {
+        var sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(savedRange);
+      }
+    } catch(e) {}
+  }
+  function rgbToColorName(rgb){
+    if (!rgb) return null;
+    var m = String(rgb).replace(/\s/g, '').match(/rgb\((\d+),(\d+),(\d+)\)/);
+    if (!m) return null;
+    var r = +m[1], g = +m[2], b = +m[3];
+    if (r < 40 && g < 40 && b < 40) return 'black';
+    if (r > 180 && g < 100 && b < 100) return 'red';
+    if (r < 100 && g < 140 && b > 180) return 'blue';
+    if (r < 100 && g > 90 && b < 100) return 'green';
+    if (r === 22 && g === 35 && b === 58) return 'black';
+    if (r === 238 && g === 241 && b === 246) return 'black';
+    return null;
+  }
+  function normalizeBodyColors(){
+    // 把浏览器插进来的行内颜色转成 data-color，换深色模式时黑色不会黑底看不见，红/蓝/绿在深色下也会提亮。
+    var els = bodyInput.querySelectorAll('[style*="color"], font[color]');
+    els.forEach(function(el){
+      var c = el.style && el.style.color ? el.style.color : el.getAttribute('color');
+      var name = rgbToColorName(c) || (c && c.indexOf('#') === 0 ? ({'#000000':'black','#d92d20':'red','#2563eb':'blue','#2e7d32':'green'})[c.toLowerCase()] : null);
+      if (name) { el.setAttribute('data-color', name); if (el.style) el.style.color = ''; el.removeAttribute('color'); }
+    });
+  }
+  function syncFormatBar(){
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !bodyInput.contains(sel.getRangeAt(0).commonAncestorContainer)) return;
+    var node = sel.getRangeAt(0).startContainer;
+    var el = node.nodeType === 3 ? node.parentElement : node;
+    var colorName = 'black', bold = false, underline = false;
+    while (el && el !== bodyInput) {
+      if (!colorName || colorName === 'black') { if (el.getAttribute && el.getAttribute('data-color')) colorName = el.getAttribute('data-color'); }
+      if (el.nodeName === 'B' || el.nodeName === 'STRONG') bold = true;
+      if (el.nodeName === 'U') underline = true;
+      var st = el.style || {};
+      if (st.fontWeight && parseInt(st.fontWeight, 10) >= 700) bold = true;
+      if (st.textDecoration && st.textDecoration.indexOf('underline') >= 0) underline = true;
+      el = el.parentElement;
+    }
+    if (colorName === 'black' || !colorName) {
+      try {
+        var q = document.queryCommandValue('foreColor');
+        var mapped = rgbToColorName(q);
+        if (mapped) colorName = mapped;
+      } catch(e) {}
+    }
+    try { if (document.queryCommandState('bold')) bold = true; } catch(e) {}
+    try { if (document.queryCommandState('underline')) underline = true; } catch(e) {}
+    document.querySelectorAll('#formatColors .color-dot').forEach(function(d){ d.classList.toggle('selected', d.dataset.color === colorName); });
+    document.getElementById('boldBtn').classList.toggle('active', bold);
+    document.getElementById('underlineBtn').classList.toggle('active', underline);
+  }
+  function applyFormat(kind, value){
+    bodyInput.focus();
+    restoreSelection();
+    try { document.execCommand('styleWithCSS', false, true); } catch(e) {}
+    if (kind === 'color') {
+      try { document.execCommand('foreColor', false, value); } catch(e) {}
+      normalizeBodyColors();
+      document.querySelectorAll('#formatColors .color-dot').forEach(function(d){ d.classList.toggle('selected', d.dataset.color === value); });
+    } else if (kind === 'bold') {
+      try { document.execCommand('bold', false, null); } catch(e) {}
+    } else if (kind === 'underline') {
+      try { document.execCommand('underline', false, null); } catch(e) {}
+    }
+    editorDirty = true;
+    updateUndoRedoButtons();
+    setTimeout(syncFormatBar, 0);
+  }
   (function(){
     var btn = document.getElementById('formatBtn');
     var bar = document.getElementById('formatBar');
-    var colors = ['#16233a','#d92d20','#e67e22','#eab308','#2e7d32','#2563eb','#7c3aed','#6b7280'];
-    document.getElementById('formatColors').innerHTML = colors.map(function(c){
-      return "<button type='button' class='color-dot' style='background:" + c + "' title='文字颜色（第6步才接功能）' aria-label='文字颜色'></button>";
+    document.getElementById('formatColors').innerHTML = FORMAT_COLORS.map(function(c){
+      return "<button type='button' class='color-dot" + (c.name === 'black' ? ' selected' : '') + "' style='--dot-color:" + c.hex + ";background:" + c.hex + "' data-color='" + c.name + "' data-hex='" + c.hex + "' title='" + c.label + "' aria-label='" + c.label + "'></button>";
     }).join('');
-    btn.addEventListener('click', function(e){ e.stopPropagation(); bar.hidden = !bar.hidden; });
+    document.querySelectorAll('#formatColors .color-dot').forEach(function(d){
+      d.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      d.addEventListener('click', function(e){
+        e.stopPropagation();
+        var name = d.dataset.color, hex = d.dataset.hex;
+        applyFormat('color', name === 'black' ? '#000000' : hex);
+        // 颜色名要对应到 data-color：黑色用 #000000，红/蓝/绿用各自 hex，normalize 后会转成名字。
+        // 直接把当前点的选中态先定下来，光标同步随后还会再校一次。
+        document.querySelectorAll('#formatColors .color-dot').forEach(function(x){ x.classList.toggle('selected', x === d); });
+      });
+    });
+    document.getElementById('boldBtn').addEventListener('mousedown', function(e){ e.preventDefault(); });
+    document.getElementById('boldBtn').addEventListener('click', function(e){ e.stopPropagation(); applyFormat('bold'); });
+    document.getElementById('underlineBtn').addEventListener('mousedown', function(e){ e.preventDefault(); });
+    document.getElementById('underlineBtn').addEventListener('click', function(e){ e.stopPropagation(); applyFormat('underline'); });
+    btn.addEventListener('click', function(e){ e.stopPropagation(); bar.hidden = !bar.hidden; if (!bar.hidden) syncFormatBar(); });
     document.addEventListener('click', function(e){
       if (!bar.hidden && !e.target.closest('#formatBar') && !e.target.closest('#formatBtn')) bar.hidden = true;
+    });
+    document.addEventListener('selectionchange', function(){ if (!document.getElementById('editorView').hidden) { saveSelection(); syncFormatBar(); } });
+    bodyInput.addEventListener('keyup', syncFormatBar);
+    bodyInput.addEventListener('click', syncFormatBar);
+    bodyInput.addEventListener('blur', saveSelection);
+  })();
+
+  // 撤销/重做：用编辑区自带的撤销栈，所以颜色和样式的改变也能撤销；按钮平时置灰，编辑后可用，撤销后重做可用。
+  function updateUndoRedoButtons(){
+    var u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
+    if (u) u.disabled = !editorDirty && !u.dataset.everEdited;
+    if (r) r.disabled = true;
+    if (u && u.dataset.everEdited) u.disabled = false;
+  }
+  document.getElementById('undoBtn').addEventListener('click', function(){
+    bodyInput.focus();
+    try { document.execCommand('undo'); } catch(e) {}
+    document.getElementById('redoBtn').disabled = false;
+    updateWordCount(); setTimeout(syncFormatBar, 0);
+  });
+  document.getElementById('redoBtn').addEventListener('click', function(){
+    bodyInput.focus();
+    try { document.execCommand('redo'); } catch(e) {}
+    updateWordCount(); setTimeout(syncFormatBar, 0);
+  });
+  // 输入后把撤销按钮点亮（用 dataset 记一次编辑，避免每次 input 都重置重做状态）。
+  bodyInput.addEventListener('input', function(){ document.getElementById('undoBtn').dataset.everEdited = '1'; document.getElementById('undoBtn').disabled = false; document.getElementById('redoBtn').disabled = true; });
+
+  // 插入图片：点小图标直接打开相册，选图后插到光标处；最多 5 张，超了不插并提示；大图先压到最长边 800 再存，避免本地存储爆掉。
+  (function(){
+    var btn = document.getElementById('imageBtn');
+    var input = document.getElementById('imageFileInput');
+    btn.addEventListener('click', function(){
+      saveSelection();
+      input.click();
+    });
+    input.addEventListener('change', function(){
+      var file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      if (getBodyImages().length >= 5) { alert('最多只能插入 5 张图片'); return; }
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var img = new Image();
+        img.onload = function(){
+          var maxW = 800, w = img.width, h = img.height;
+          if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+          var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          var url = canvas.toDataURL('image/jpeg', 0.85);
+          bodyInput.focus(); restoreSelection();
+          var imgEl = document.createElement('img'); imgEl.src = url; imgEl.alt = '';
+          var sel = window.getSelection();
+          if (sel.rangeCount && bodyInput.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+            var range = sel.getRangeAt(0); range.deleteContents(); range.insertNode(imgEl);
+            var br = document.createElement('br'); imgEl.after(br);
+            range.setStartAfter(br); range.collapse(true); sel.removeAllRanges(); sel.addRange(range);
+          } else {
+            bodyInput.appendChild(imgEl); bodyInput.appendChild(document.createElement('br'));
+          }
+          editorDirty = true;
+          document.getElementById('undoBtn').dataset.everEdited = '1'; document.getElementById('undoBtn').disabled = false;
+          updateWordCount(); scheduleDraft();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
     });
   })();
 
   // 笔记列表 + 编辑页跳转，全部存在本地 localStorage，刷新后还在。
   var NOTES_KEY = 'notes_v1';
-  var currentNoteId = null, origTitle = '', origBody = '', origNote = null, draftTimer = null;
+  var currentNoteId = null, origTitle = '', origBody = '', origBodyHtml = '', origNote = null, draftTimer = null;
   var selecting = false, selectedIds = new Set(), longPressTimer = null, longPressed = false;
   function loadNotes(){ try { var v = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch(e) { return []; } }
   function saveNotes(notes){ try { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); } catch(e) {} }
@@ -233,7 +434,9 @@
       var card = document.createElement('div');
       card.className = 'note-card' + (selectedIds.has(n.id) ? ' selected' : '');
       card.dataset.id = n.id;
-      var thumb = (n.images && n.images.length) ? "<img class='note-thumb' src='" + escapeHtml(n.images[0]) + "' alt=''>" : '';
+      var thumbSrc = (n.images && n.images.length) ? n.images[0] : null;
+      if (!thumbSrc && n.bodyHtml) { var m = String(n.bodyHtml).match(/<img[^>]+src=["']([^"']+)["']/); if (m) thumbSrc = m[1]; }
+      var thumb = thumbSrc ? "<img class='note-thumb' src='" + escapeHtml(thumbSrc) + "' alt=''>" : '';
       card.innerHTML = "<div class='note-card-inner'><div class='note-card-text'><p class='note-title'>" + escapeHtml(showTitle) + "</p><p class='note-summary'>" + escapeHtml(n.body || '') + "</p><p class='note-time'>" + escapeHtml(formatNoteTime(n.updatedAt || n.createdAt || Date.now())) + "</p></div>" + thumb + "</div><button type='button' class='note-delete-swipe'>删除</button>";
       // 点击整张卡：选择模式下切换选中，否则打开编辑页。
       card.addEventListener('click', function(e){
@@ -300,15 +503,29 @@
   document.getElementById('searchInput').addEventListener('input', renderList);
   document.getElementById('newNoteBtn').addEventListener('click', function(){ openEditor(null); });
 
+  function plainToHtml(text){
+    return String(text || '').split('\n').map(function(l){ return escapeHtml(l); }).join('<br>');
+  }
   function openEditor(id){
     var notes = loadNotes();
     var note = id ? notes.find(function(n){ return n.id === id; }) : null;
     currentNoteId = note ? note.id : null;
-    origNote = note ? { id: note.id, title: note.title || '', body: note.body || '', createdAt: note.createdAt, updatedAt: note.updatedAt, images: note.images || [] } : null;
+    var bodyHtml = note ? (note.bodyHtml || plainToHtml(note.body || '')) : '';
+    var bodyPlain = note ? (note.body || '') : '';
+    origNote = note ? { id: note.id, title: note.title || '', body: bodyPlain, bodyHtml: bodyHtml, createdAt: note.createdAt, updatedAt: note.updatedAt, images: note.images || [] } : null;
     origTitle = note ? (note.title || '') : '';
-    origBody = note ? (note.body || '') : '';
+    origBody = bodyPlain;
+    origBodyHtml = bodyHtml;
     titleInput.value = origTitle;
-    bodyInput.value = origBody;
+    bodyInput.innerHTML = bodyHtml;
+    savedRange = null;
+    editorDirty = false;
+    var u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
+    if (u) { u.disabled = true; delete u.dataset.everEdited; }
+    if (r) r.disabled = true;
+    document.querySelectorAll('#formatColors .color-dot').forEach(function(d){ d.classList.toggle('selected', d.dataset.color === 'black'); });
+    document.getElementById('boldBtn').classList.remove('active');
+    document.getElementById('underlineBtn').classList.remove('active');
     updateWordCount(); updateDateTime();
     document.getElementById('formatBar').hidden = true;
     selecting = false; selectedIds.clear();
@@ -316,17 +533,17 @@
     try { titleInput.focus({preventScroll: true}); } catch(e) { try { titleInput.focus(); } catch(e2) {} }
   }
   function upsertCurrentNote(){
-    var title = titleInput.value, body = bodyInput.value;
-    if (!title.trim() && !body.trim()) return false;
+    var title = titleInput.value, body = getBodyPlainText(), bodyHtml = bodyInput.innerHTML, images = getBodyImages();
+    if (!title.trim() && !body.trim() && !images.length) return false;
     var notes = loadNotes();
     var now = Date.now();
     if (currentNoteId) {
       var ex = notes.find(function(n){ return n.id === currentNoteId; });
-      if (ex) { ex.title = title; ex.body = body; ex.updatedAt = now; }
-      else notes.unshift({ id: currentNoteId, title: title, body: body, createdAt: now, updatedAt: now, images: [] });
+      if (ex) { ex.title = title; ex.body = body; ex.bodyHtml = bodyHtml; ex.images = images; ex.updatedAt = now; }
+      else notes.unshift({ id: currentNoteId, title: title, body: body, bodyHtml: bodyHtml, createdAt: now, updatedAt: now, images: images });
     } else {
       currentNoteId = 'n' + now + Math.random().toString(36).slice(2, 7);
-      notes.unshift({ id: currentNoteId, title: title, body: body, createdAt: now, updatedAt: now, images: [] });
+      notes.unshift({ id: currentNoteId, title: title, body: body, bodyHtml: bodyHtml, createdAt: now, updatedAt: now, images: images });
     }
     saveNotes(notes);
     return true;
@@ -335,28 +552,28 @@
   function scheduleDraft(){
     clearTimeout(draftTimer);
     draftTimer = setTimeout(function(){
-      if (!titleInput.value.trim() && !bodyInput.value.trim()) return;
+      if (!titleInput.value.trim() && !getBodyPlainText().trim() && !getBodyImages().length) return;
       upsertCurrentNote();
     }, 3000);
   }
   titleInput.addEventListener('input', scheduleDraft);
   bodyInput.addEventListener('input', scheduleDraft);
   document.getElementById('completeBtn').addEventListener('click', function(){
-    if (!titleInput.value.trim() && !bodyInput.value.trim()) { showView('list'); return; }
+    if (!titleInput.value.trim() && !getBodyPlainText().trim() && !getBodyImages().length) { showView('list'); return; }
     upsertCurrentNote();
     showView('list');
   });
   document.getElementById('backBtn').addEventListener('click', function(){
-    var changed = titleInput.value !== origTitle || bodyInput.value !== origBody;
+    var changed = editorDirty || titleInput.value !== origTitle || getBodyPlainText() !== origBody || bodyInput.innerHTML !== origBodyHtml;
     if (!changed) { showView('list'); return; }
     if (confirm('内容有修改，是否保存？')) {
-      if (titleInput.value.trim() || bodyInput.value.trim()) upsertCurrentNote();
+      if (titleInput.value.trim() || getBodyPlainText().trim() || getBodyImages().length) upsertCurrentNote();
     } else {
-      // 不保存：恢复打开时的原样，新笔记则删掉草稿自动保存产生的那一条。
+      // 不保存：恢复打开时的原样（包括颜色和样式），新笔记则删掉草稿自动保存产生的那一条。
       var notes = loadNotes();
       if (origNote) {
         var ex = notes.find(function(n){ return n.id === origNote.id; });
-        if (ex) { ex.title = origNote.title; ex.body = origNote.body; ex.updatedAt = origNote.updatedAt; }
+        if (ex) { ex.title = origNote.title; ex.body = origNote.body; ex.bodyHtml = origNote.bodyHtml; ex.images = origNote.images; ex.updatedAt = origNote.updatedAt; }
         saveNotes(notes);
       } else if (currentNoteId) {
         saveNotes(notes.filter(function(n){ return n.id !== currentNoteId; }));

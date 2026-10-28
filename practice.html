@@ -10,10 +10,10 @@
 <title>拍照错题本 · 练习</title>
 <link rel="stylesheet" href="styles.css">
 <style>
-  /* 科目胶囊：一行横向排列，放不下横向滑动，不换行，不出滚动条 */
-  .subj-row{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding:4px 2px;margin:14px 0 18px;scrollbar-width:none;-ms-overflow-style:none}
+  /* 科目胶囊：跟错题库顶部胶囊同尺寸同比例，不再偏大：高 34px、左右 12px、字 13px，一行横向滑动，不换行，不出滚动条 */
+  .subj-row{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding:0 0 4px;margin:0 0 4px;scrollbar-width:none;-ms-overflow-style:none}
   .subj-row::-webkit-scrollbar{display:none}
-  .chip{flex:0 0 auto;margin:0;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:#f7f0dd;color:var(--ink);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .1s ease}
+  .chip{flex:0 0 auto;margin:0;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:#f7f0dd;color:var(--ink);font-size:13px;line-height:34px;font-weight:700;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .1s ease}
   .chip:active{transform:scale(.96)}
   .chip.selected{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:800}
   .chip.disabled{opacity:.45;cursor:not-allowed}
