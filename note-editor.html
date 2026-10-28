@@ -138,6 +138,15 @@
   /* 文字选择手柄/选区也用强调色（浏览器支持的部分） */
   .body-input::selection{background:var(--accent-soft)}
 
+  /* 键盘打开时的工具栏：脱离底部栏，固定在键盘上面一行。
+     --kb-bottom 优先用实测键盘高度，测不到时用 JS 按屏幕 42% 估算，宁可留一点空隙，也不要被盖住。 */
+  body.kb-open .toolbar{
+    position:fixed;
+    left:0; right:0;
+    bottom:var(--kb-bottom, env(keyboard-inset-height, 0px));
+    z-index:20;
+  }
+  body.kb-open .page{padding-bottom:64px}
   /* ========== 4. 底部工具栏 ========== */
   .toolbar{
     flex:0 0 auto;
@@ -236,20 +245,24 @@
   // 把页面高度改成这个高度，工具栏就会跟着上移、贴在键盘上面一行，而不是被键盘盖住、也不会蹦到页面顶部。
   // 没有 visualViewport 的旧浏览器就保持原来的 100dvh，不会坏。
   (function(){
+    var toolbar = document.querySelector('.toolbar');
+    function measuredKb(){
+      if (window.visualViewport) {
+        return Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
+      }
+      return 0;
+    }
     function updateViewport(){
-      // 第一层：可视区域缩小（Chrome 等）时，页面高度跟着变，工具栏就贴到键盘上面。
       if (window.visualViewport) {
         document.documentElement.style.setProperty('--viewport-height', window.visualViewport.height + 'px');
-        // 第二层：如果可视区域没变（有的浏览器键盘是覆盖模式），用可视区域底部位置反推键盘高度，
-        // 把工具栏的底部顶起，避免被盖住。
-        var kb = Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
-        document.documentElement.style.setProperty('--keyboard-height', kb + 'px');
-        var tb0 = document.querySelector('.toolbar');
-        if (tb0) {
-          if (kb > 0) { tb0.style.paddingBottom = (8 + kb) + 'px'; }
-          else { tb0.style.paddingBottom = ''; }
-        }
       }
+    }
+    function applyKb(){
+      var kb = measuredKb();
+      // 测不到键盘高度时（有的浏览器键盘是覆盖模式，不报高度），按截图里键盘约占屏幕 42% 估算。
+      if (kb < 50) { kb = Math.round(window.innerHeight * 0.42); }
+      document.documentElement.style.setProperty('--kb-bottom', kb + 'px');
+      updateViewport();
     }
     updateViewport();
     if (window.visualViewport) {
@@ -257,21 +270,34 @@
       window.visualViewport.addEventListener('scroll', updateViewport);
     }
     window.addEventListener('resize', updateViewport);
-    // 第三层：虚拟键盘 API 可用时，让浏览器不要用覆盖模式，改成压缩布局，工具栏自然在键盘上面。
+    // 虚拟键盘 API 可用时，让它覆盖内容，这样 env(keyboard-inset-height) 才能报出键盘高度。
     try {
       if (navigator.virtualKeyboard) {
-        navigator.virtualKeyboard.overlaysContent = false;
-        navigator.virtualKeyboard.addEventListener('geometrychange', updateViewport);
+        navigator.virtualKeyboard.overlaysContent = true;
+        navigator.virtualKeyboard.addEventListener('geometrychange', applyKb);
       }
     } catch(e) {}
-    // 第四层：点输入框、键盘动画还没走完时，再补两次刷新，并把工具栏滚进可视区。
-    document.addEventListener('focusin', function(){
-      setTimeout(updateViewport, 300);
-      setTimeout(updateViewport, 600);
+    // 点输入框就进入键盘模式：工具栏固定到键盘上面；键盘动画走完前多测几次，实测到高度就替换估算值。
+    document.addEventListener('focusin', function(e){
+      if (!e.target || (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) return;
+      document.body.classList.add('kb-open');
+      applyKb();
+      var n = 0;
+      var timer = setInterval(function(){
+        n++;
+        applyKb();
+        if (n >= 8) clearInterval(timer);
+      }, 200);
+    });
+    // 离开输入框（切到另一个输入框时 focusin 会先到，不会误关）就恢复底部栏。
+    document.addEventListener('focusout', function(){
       setTimeout(function(){
-        var tb = document.querySelector('.toolbar');
-        if (tb) { try { tb.scrollIntoView({block: 'nearest'}); } catch(e) {} }
-      }, 600);
+        var ae = document.activeElement;
+        if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA')) {
+          document.body.classList.remove('kb-open');
+          document.documentElement.style.setProperty('--kb-bottom', '0px');
+        }
+      }, 200);
     });
   })();
   // 注意：第1步到此为止。返回、撤销、重做、完成、图片、待办、格式这几个按钮
