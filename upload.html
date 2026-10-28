@@ -15,15 +15,11 @@
 <div class="camscreen" id="camScreen">
 <div class="cam-top"><a href="home.html" aria-label="返回主页">←</a><span class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</span></div>
 <video id="camVideo" autoplay playsinline muted></video>
-<div class="cam-mode" id="camModeBar">
-<div class="cam-mode-btns"><button type="button" id="modeSingle" class="active">拍一页</button><button type="button" id="modeMulti">拍多页</button></div>
-<span id="camPagesText" class="cam-pages">多页：已拍 0 / 5 页</span>
+<div class="cam-bottom" id="camBottomBar">
+<div class="cam-left"><div class="cam-mode-btns"><button type="button" id="modeSingle" class="active">拍一页</button><button type="button" id="modeMulti">拍多页</button></div></div>
+<div class="cam-center"><button type="button" class="shoot-btn" id="shootBtn" aria-label="拍照" title="拍照"></button></div>
+<div class="cam-right"><label class="album-btn" title="打开相册，选已有照片">相册<input type="file" accept="image/*" id="file" class="hidden"></label><button type="button" class="confirm-btn" id="confirmPagesBtn" disabled>确认<span class="confirm-badge" id="confirmBadge">0</span></button></div>
 </div>
-<div class="cam-controls">
-<button type="button" class="shoot-btn" id="shootBtn">拍照</button>
-<label class="album-btn" title="打开相册，选已有照片">相册<input type="file" accept="image/*" id="file" class="hidden"></label>
-</div>
-<div class="cam-confirm" id="camConfirmRow" style="display:none"><span id="camConfirmText">已拍 0 页</span><button type="button" id="confirmPagesBtn">确认 → 框选题目</button></div>
 </div>
 <canvas id="camCanvas" class="hidden"></canvas>
 <main class="zyb-page zyb-full">
@@ -196,12 +192,20 @@ function showImageFromCanvas(){
 function updateCamUI(){
   document.getElementById("modeSingle").classList.toggle("active", !multiMode);
   document.getElementById("modeMulti").classList.toggle("active", multiMode);
-  const pagesText = document.getElementById("camPagesText");
-  pagesText.style.display = multiMode ? "" : "none";
-  pagesText.textContent = "多页：已拍 " + photoPages.length + " / 5 页";
-  const row = document.getElementById("camConfirmRow");
-  row.style.display = (multiMode && photoPages.length) ? "flex" : "none";
-  document.getElementById("camConfirmText").textContent = "已拍 " + photoPages.length + " 页" + (photoPages.length >= 5 ? "，已满" : "");
+  // 确认按钮始终在布局里占位，位置和大小固定，不因模式或张数出现、消失或挤动别人。
+  const confirmBtn = document.getElementById("confirmPagesBtn");
+  const badge = document.getElementById("confirmBadge");
+  if (confirmBtn) {
+    if (!multiMode) {
+      // 拍一页模式：确认置灰不可点，角标隐藏但按钮仍占位。
+      confirmBtn.disabled = true;
+      if (badge) badge.style.visibility = "hidden";
+    } else {
+      // 拍多页模式：没拍过置灰不可点，拍了至少一张变红可点，角标显示已拍张数，绝对定位不占布局空间。
+      confirmBtn.disabled = photoPages.length === 0;
+      if (badge) { badge.textContent = String(photoPages.length); badge.style.visibility = "visible"; }
+    }
+  }
   const shoot = document.getElementById("shootBtn");
   shoot.disabled = multiMode && photoPages.length >= 5;
   shoot.style.opacity = shoot.disabled ? "0.5" : "";
