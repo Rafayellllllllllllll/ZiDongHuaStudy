@@ -13,7 +13,7 @@
 <script src="config.js"></script><script src="app.js"></script>
 </head><body>
 <div class="camscreen" id="camScreen">
-<div class="cam-top"><a href="home.html">← 回主页</a><span class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</span></div>
+<div class="cam-top"><a href="home.html" aria-label="返回主页">←</a><span class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</span></div>
 <video id="camVideo" autoplay playsinline muted></video>
 <div class="cam-mode" id="camModeBar">
 <div class="cam-mode-btns"><button type="button" id="modeSingle" class="active">拍一页</button><button type="button" id="modeMulti">拍多页</button></div>
@@ -69,6 +69,7 @@ async function startCamera(){
     tip.textContent = "对着题目，点中间粉色按钮拍照，右下角相册可以选已有照片";
   } catch(e) {
     tip.textContent = "相机打不开：请允许相机权限，或点下面“打不开相机？用系统相机拍照”，也可以直接点右下角相册";
+    try { PWQ.toast("相机打不开：请允许相机权限，或点右下角相册选已有照片"); } catch(e) {}
     video.style.display = "none";
   }
 }
