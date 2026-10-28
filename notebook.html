@@ -87,6 +87,13 @@
   .body-input:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none}
   .body-input::selection{background:var(--accent-soft)}
   .body-input img{max-width:100%;height:auto;border-radius:12px;display:block;margin:8px 0}
+  /* 待办：第 5 步。方框是 20px 方块，打勾后整行变灰加删除线，方框里的勾用 CSS 画，不占字数。 */
+  .todo-item{display:flex;align-items:flex-start;gap:8px;margin:4px 0;line-height:1.75}
+  .todo-box{flex:0 0 auto;width:20px;height:20px;margin-top:4px;border:2px solid var(--text);border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .todo-item.checked .todo-box::after{content:"\2713";font-size:15px;font-weight:800;line-height:1}
+  .todo-text{flex:1;min-width:0;outline:0}
+  .todo-item.checked .todo-text{color:var(--muted);text-decoration:line-through}
+  .todo-item.checked .todo-text *{color:var(--muted) !important}
   .body-input [data-color="black"]{color:#000}
   .body-input [data-color="red"]{color:#d92d20}
   .body-input [data-color="blue"]{color:#2563eb}
@@ -123,7 +130,7 @@
     </div>
     <div class="top-tools">
       <button class="icon-btn" type="button" id="imageBtn" aria-label="插入图片" title="插入图片"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-4 4"/></svg></button>
-      <button class="icon-btn" type="button" aria-label="待办清单" title="待办清单（第5步才接功能）"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></button>
+      <button class="icon-btn" type="button" id="todoBtn" aria-label="待办清单" title="待办清单"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></button>
       <button class="icon-btn" type="button" id="formatBtn" aria-label="文字格式" title="文字格式"><span class="format-t">T</span></button>
     </div>
     <div class="top-sep" aria-hidden="true"></div>
@@ -354,6 +361,112 @@
   });
   // 输入后把撤销按钮点亮（用 dataset 记一次编辑，避免每次 input 都重置重做状态）。
   bodyInput.addEventListener('input', function(){ document.getElementById('undoBtn').dataset.everEdited = '1'; document.getElementById('undoBtn').disabled = false; document.getElementById('redoBtn').disabled = true; });
+
+  // 待办：第 5 步。点顶部待办按钮，把当前行变成待办项；再点一次变回普通行。
+  // 点方框打勾/取消，打勾后整行变灰加删除线；回车开下一条待办，空待办回车退出清单变回普通行。
+  function getCurrentBlock(){
+    try {
+      var sel = window.getSelection();
+      if (!sel.rangeCount) return null;
+      var node = sel.getRangeAt(0).startContainer;
+      while (node && node.parentNode !== bodyInput && node !== bodyInput) node = node.parentNode;
+      return node === bodyInput ? null : node;
+    } catch(e) { return null; }
+  }
+  function createTodoItem(html){
+    var item = document.createElement('div');
+    item.className = 'todo-item';
+    var box = document.createElement('span');
+    box.className = 'todo-box';
+    box.setAttribute('contenteditable', 'false');
+    var text = document.createElement('span');
+    text.className = 'todo-text';
+    text.innerHTML = html || '';
+    item.appendChild(box); item.appendChild(text);
+    return item;
+  }
+  function placeCaretIn(el, atEnd){
+    try {
+      var sel = window.getSelection(); var range = document.createRange();
+      if (atEnd) { range.selectNodeContents(el); range.collapse(false); }
+      else { range.setStart(el, 0); range.collapse(true); }
+      sel.removeAllRanges(); sel.addRange(range);
+    } catch(e) {}
+  }
+  function convertTodoToNormal(item){
+    var textEl = item.querySelector('.todo-text');
+    var div = document.createElement('div');
+    div.innerHTML = textEl ? textEl.innerHTML : '';
+    if (!div.innerHTML) div.innerHTML = '<br>';
+    item.replaceWith(div);
+    placeCaretIn(div, true);
+    return div;
+  }
+  function toggleTodo(){
+    bodyInput.focus(); restoreSelection();
+    var block = getCurrentBlock();
+    if (block && block.classList && block.classList.contains('todo-item')) {
+      convertTodoToNormal(block);
+    } else if (block && block.nodeType === 3) {
+      var item = createTodoItem(escapeHtml(block.textContent));
+      block.replaceWith(item);
+      placeCaretIn(item.querySelector('.todo-text'), true);
+    } else if (block) {
+      var item = createTodoItem(block.innerHTML);
+      block.replaceWith(item);
+      placeCaretIn(item.querySelector('.todo-text'), true);
+    } else {
+      var item2 = createTodoItem('');
+      bodyInput.appendChild(item2);
+      placeCaretIn(item2.querySelector('.todo-text'), false);
+    }
+    editorDirty = true;
+    document.getElementById('undoBtn').dataset.everEdited = '1'; document.getElementById('undoBtn').disabled = false;
+    updateWordCount(); scheduleDraft();
+  }
+  document.getElementById('todoBtn').addEventListener('mousedown', function(e){ e.preventDefault(); });
+  document.getElementById('todoBtn').addEventListener('click', function(e){ e.stopPropagation(); toggleTodo(); });
+  // 点方框打勾/取消：方框本身不可编辑，点它不移动光标，只切换状态并保存。
+  bodyInput.addEventListener('mousedown', function(e){
+    if (e.target.closest && e.target.closest('.todo-box')) e.preventDefault();
+  });
+  bodyInput.addEventListener('click', function(e){
+    var box = e.target.closest ? e.target.closest('.todo-box') : null;
+    if (!box) return;
+    e.preventDefault(); e.stopPropagation();
+    var item = box.closest('.todo-item');
+    if (!item) return;
+    var checked = item.classList.toggle('checked');
+    item.dataset.checked = checked ? 'true' : 'false';
+    editorDirty = true;
+    document.getElementById('undoBtn').dataset.everEdited = '1'; document.getElementById('undoBtn').disabled = false;
+    scheduleDraft();
+  });
+  // 回车：在待办里回车开下一条，空待办回车退出清单。
+  bodyInput.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    var sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    var node = sel.getRangeAt(0).startContainer;
+    var item = null, el = node.nodeType === 3 ? node.parentElement : node;
+    while (el && el !== bodyInput) { if (el.classList && el.classList.contains('todo-item')) { item = el; break; } el = el.parentElement; }
+    if (!item) return;
+    e.preventDefault();
+    var textEl = item.querySelector('.todo-text');
+    var text = textEl ? textEl.textContent.trim() : '';
+    if (!text) {
+      convertTodoToNormal(item);
+    } else {
+      var next = createTodoItem('');
+      item.after(next);
+      placeCaretIn(next.querySelector('.todo-text'), false);
+    }
+    editorDirty = true;
+    document.getElementById('undoBtn').dataset.everEdited = '1'; document.getElementById('undoBtn').disabled = false;
+    updateWordCount();
+    bodyInput.dispatchEvent(new Event('input', {bubbles: true}));
+    scheduleDraft();
+  });
 
   // 插入图片：点小图标直接打开相册，选图后插到光标处；最多 5 张，超了不插并提示；大图先压到最长边 800 再存，避免本地存储爆掉。
   (function(){
