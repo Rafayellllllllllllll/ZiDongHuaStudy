@@ -105,10 +105,29 @@ function finish(){
     const a = answers[pool.indexOf(q)];
     return a && a.ok && (q._origStreak || 0) + 1 >= 3;
   }).length;
+  // 答案等全部练完再一起出：练的时候一题都不出答案，这里按题号列出每道题的正确答案、你选的和解析。
+  const list = pool.map((q, i) => {
+    const a = answers[i] || { chosen: "", unsure: false, ok: false };
+    const opts = (q.options || []).map((o, oi) => {
+      const letter = String.fromCharCode(65 + oi);
+      let cls = "opt";
+      let mark = "";
+      if (letter === q.answer) { cls += " correct"; mark = "<span class='mark'>正确答案</span>"; }
+      else if (!a.unsure && a.chosen === letter) { cls += " wrong"; mark = "<span class='mark'>你选了 ×</span>"; }
+      return "<div class='" + cls + "'><span>" + letter + ". " + PWQ.escapeHtml(o) + "</span>" + mark + "</div>";
+    }).join("");
+    const your = a.unsure ? "你点了不确定" : (a.chosen ? "你选了 " + a.chosen : "你没选");
+    const result = a.unsure ? "不确定，算没掌握" : (a.ok ? "答对了" : "答错了");
+    return "<div class='qitem'><p>第 " + (i+1) + " 题 · " + PWQ.escapeHtml(q.subject) + " · " + PWQ.escapeHtml(q.type) + "</p>" +
+      "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" + opts +
+      "<p class='small'>" + your + "，" + result + "。</p>" +
+      "<div class='explain'><b>红笔解析：</b>" + PWQ.escapeHtml(q.explain || "这道题还没有解析。") + "</div></div>";
+  }).join("");
   card.innerHTML = "<div class='qitem'><h1>这次练习结束了</h1>" +
     "<p>共 " + pool.length + " 题：答对 " + correct + " 道，答错 " + wrong + " 道，不确定 " + unsure + " 道。</p>" +
     (newly ? "<p>其中 " + newly + " 道已连续做对三次，标为已经会了。</p>" : "<p>不确定和答错的题都算没掌握，还会再出现在练习里。</p>") +
-    "<p><a class='btn' href='practice.html'>回练习页</a></p></div>";
+    "<p>下面是全部题目的答案，练的时候没有提前出答案。</p>" +
+    "<p><a class='btn' href='practice.html'>回练习页</a></p></div>" + list;
   try { sessionStorage.removeItem("pwq_practice_ids"); } catch(e) {}
 }
 init();

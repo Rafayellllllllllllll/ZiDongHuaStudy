@@ -13,29 +13,77 @@
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>练习</h1>
-<p>练习前自选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。点开始练习会跳到新页面，一页一题，点选项自动下一题。</p>
+<p>先选科目，再选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。点开始练习会跳到新页面，一页一题，点选项自动下一题，答案等全部练完再一起出。</p>
+<label>练哪些科目？（可单选、多选，也可全选）</label>
+<div id="subjectArea"><p class="small">正在加载科目…</p></div>
+<p class="small" id="subjectTotal"></p>
 <label>这次练几道？（五的倍数，最多 50）</label>
 <select id="count"><option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option><option>35</option><option>40</option><option>45</option><option>50</option></select>
 <p><button id="start">开始练习</button>
 <button class="secondary" id="review">已掌握复查（隔一段时间抽查，骨架占位）</button></p>
 <p class="small">如果剩下未掌握的题不够你选的数，就按剩下的来。已经会了的题隔一段时间再抽查，抽查错了回到未掌握；按知识点生成同类题以后由 DeepSeek 生成，骨架里是占位按钮。</p>
-<div id="area"></div></div>
+</div>
 </main><footer>云端版 · 练习计数存在 Supabase</footer>
 <script>
 let pool = [], idx = 0;
+async function renderSubjects(){
+  await PWQ.ready();
+  const area = document.getElementById("subjectArea");
+  const totalEl = document.getElementById("subjectTotal");
+  if (!PWQ.currentUser()) { area.innerHTML = "<p>请先去登录页登录，登录后才能看到错题库的科目。</p>"; totalEl.textContent = ""; return; }
+  const all = PWQ.getQuestions();
+  // 科目和数量按错题库实时算，不写死：科目按错题库里出现的顺序，数量是该科目未掌握的题数。
+  const order = [];
+  const info = {};
+  all.forEach(q => {
+    const s = q.subject || "其他";
+    if (!info[s]) { info[s] = { total: 0, unmastered: 0 }; order.push(s); }
+    info[s].total++;
+    if (!q.mastered) info[s].unmastered++;
+  });
+  if (!order.length) { area.innerHTML = "<p>错题库里还没有题，先去录错题。</p>"; totalEl.textContent = ""; return; }
+  const items = order.map(s => {
+    const dis = info[s].unmastered === 0 ? " disabled" : "";
+    const chk = info[s].unmastered > 0 ? " checked" : "";
+    const label = info[s].unmastered === 0 ? PWQ.escapeHtml(s) + "（已全部掌握）" : PWQ.escapeHtml(s) + "（未掌握 " + info[s].unmastered + " 道）";
+    return "<label style='display:block;margin:6px 0'><input type='checkbox' class='subj' value='" + PWQ.escapeHtml(s) + "'" + chk + dis + "> " + label + "</label>";
+  }).join("");
+  area.innerHTML = "<label style='display:block;margin:6px 0'><input type='checkbox' id='subjAll' checked> 全部科目</label>" + items;
+  function updateTotal(){
+    const sel = getSelectedSubjects();
+    const n = all.filter(q => !q.mastered && sel.includes(q.subject || "其他")).length;
+    totalEl.textContent = "已选科目共 " + n + " 道未掌握题，开始练习时会从里面随机出题。";
+    const allBox = document.getElementById("subjAll");
+    if (allBox) {
+      const boxes = Array.from(area.querySelectorAll(".subj")).filter(b => !b.disabled);
+      allBox.checked = boxes.length && boxes.every(b => b.checked);
+    }
+  }
+  area.querySelectorAll(".subj").forEach(b => b.addEventListener("change", updateTotal));
+  document.getElementById("subjAll").addEventListener("change", (e) => {
+    area.querySelectorAll(".subj").forEach(b => { if (!b.disabled) b.checked = e.target.checked; });
+    updateTotal();
+  });
+  updateTotal();
+}
+function getSelectedSubjects(){
+  return Array.from(document.querySelectorAll(".subj")).filter(b => b.checked).map(b => b.value);
+}
 async function start(){
   await PWQ.ready();
-  if (!PWQ.currentUser()) { document.getElementById("area").innerHTML = "<p>请先去登录页登录，登录后才能练习云端的题。</p>"; return; }
-  const all = PWQ.getQuestions().filter(q => !q.mastered);
-  // 随机打乱：不按原来顺序，取用户选的数目。
+  if (!PWQ.currentUser()) { PWQ.toast("请先去登录页登录，登录后才能练习云端的题。"); location.href = "index.html"; return; }
+  const sel = getSelectedSubjects();
+  if (!sel.length) { PWQ.toast("请至少选一个科目。"); return; }
+  const all = PWQ.getQuestions().filter(q => !q.mastered && sel.includes(q.subject || "其他"));
+  // 随机打乱：不按原来顺序，取用户选的数目；不够就按选中的来。
   const pool = all.sort(() => Math.random() - 0.5)
     .slice(0, parseInt(document.getElementById("count").value, 10));
-  if (!pool.length) { document.getElementById("area").innerHTML = "<p>没有未掌握的题了，可以去错题库看看，或等已掌握复查。</p>"; return; }
-  // 跳转到新页面做题：一页一题，题号顺序存在浏览器里，新页面按这个顺序出题。
+  // 开始练习一定跳新页面，原页面下面不练题：题号存浏览器里，新页面按这个顺序出题；没题也跳新页面显示，新页面会说明。
   try { sessionStorage.setItem("pwq_practice_ids", JSON.stringify(pool.map(q => q.id))); } catch(e) {}
   location.href = "practice-run.html";
 }
 document.getElementById("start").onclick = start;
+renderSubjects();
 document.getElementById("review").onclick = () =>
   PWQ.toast("占位：已掌握复查应隔一段时间（例如一两周，具体天数待定）再随机抽查，抽查错了回到未掌握。当前骨架不自动排期。");
 </script>
