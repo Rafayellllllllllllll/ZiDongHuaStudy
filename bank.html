@@ -15,7 +15,7 @@
 <div class="bank-top"><h1>错题库</h1><button type="button" class="bank-clean" id="dedupBtn" title="清理重复题">清理重复</button></div>
 <p class="small bank-dedup-info" id="dedupInfo"></p>
 <div id="pills" class="pills-scroll"></div>
-<div id="list"></div>
+<div id="list"><p class="small">正在加载错题…</p></div>
 <p class="bank-tools"><button class="bank-tool" onclick="window.print()">导出打印</button>
 <a class="btn bank-tool" href="practice.html">去练习</a></p>
 </main><footer>云端版 · 数据存在 Supabase</footer>
@@ -37,7 +37,7 @@ function renderPills(){
   const el = document.getElementById("pills");
   el.innerHTML = dynamicSubjects().map(s => "<button type='button' class='bank-pill" + (s === currentSubject ? " active" : "") + "' data-s='" + s + "'>" + s + "</button>").join("");
   el.querySelectorAll(".bank-pill").forEach(btn => {
-    btn.onclick = () => { currentSubject = btn.dataset.s; render(); };
+    btn.onclick = () => { currentSubject = btn.dataset.s; renderList(); };
   });
 }
 function optionExplain(q, letter){
@@ -51,10 +51,7 @@ function optionExplain(q, letter){
   if (parts[letter]) return parts[letter];
   return "";
 }
-async function render(){
-  await PWQ.ready();
-  if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录，登录后这里才会显示你在云端的错题。</p>"; return; }
-  allQs = sortNewToOld(PWQ.getQuestions());
+function renderList(){
   if (currentSubject !== "全部" && !allQs.some(q => (q.subject || "其他") === currentSubject)) currentSubject = "全部";
   renderPills();
   const list = document.getElementById("list");
@@ -76,7 +73,7 @@ async function render(){
     }).join("") : "";
     const ansText = q.answer ? PWQ.escapeHtml(q.answer) + (function(){ const cs = q.options ? q.options.filter(o => ansLetters.includes(o.trim().charAt(0).toUpperCase())).map(o => o.replace(/^[A-D][\.、．：:]\s*/, "")) : []; return cs.length ? "，" + PWQ.escapeHtml(cs.join("、")) : ""; })() : "答案暂缺";
     d.innerHTML =
-      "<p class='bank-tags'><span class='tag'>" + PWQ.escapeHtml(q.subject || "其他") + "</span>" +
+      "<p class='bank-tags'><button type='button' class='tag tag-subject' title='点一下改学科'>" + PWQ.escapeHtml(q.subject || "其他") + " ▾</button>" +
       (q.qkind ? "<span class='tag'>" + PWQ.escapeHtml(q.qkind) + "</span>" : "") +
       "<span class='tag'>" + PWQ.escapeHtml(q.type || "") + "</span>" +
       (cstDate ? "<span class='tag'>" + cstDate + "</span>" : "") + "</p>" +
@@ -84,17 +81,71 @@ async function render(){
       optsHtml +
       "<p class='bank-answer'>答案：" + ansText + "</p>" +
       "<p class='bank-actions'><button type='button' class='viewBtn'>查看解析</button> <button type='button' class='secondary editBtn'>改解析</button> <button type='button' class='ghost delBtn'>删除</button></p>";
+    d.querySelector(".tag-subject").onclick = () => openSubjectPicker(q);
     d.querySelector(".viewBtn").onclick = () => openAnalysis(q);
     d.querySelector(".editBtn").onclick = async () => {
       const ne = prompt("改解析（改过的会标手动改过、不锁定，还能再改）：", q.explain);
-      if (ne !== null) { q.explain = ne; q.edited = true; try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); } render(); }
+      if (ne !== null) { q.explain = ne; q.edited = true; try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); } renderList(); }
     };
     d.querySelector(".delBtn").onclick = async () => {
       if (!confirm("确定删除这道题吗？云端也会删掉。")) return;
-      await PWQ.deleteQuestion(q.id); render();
+      await PWQ.deleteQuestion(q.id); renderList();
     };
     list.appendChild(d);
   });
+}
+function closeSheet(){
+  document.getElementById("kpSheet").classList.remove("open");
+  document.getElementById("kpBackdrop").classList.remove("show");
+}
+function openSubjectPicker(q){
+  // 左上角学科标签点一下就能改：先列已有学科，点一个直接改；没有合适的就点自定义自己输。
+  const sheet = document.getElementById("kpSheet");
+  const body = document.getElementById("kpBody");
+  const backdrop = document.getElementById("kpBackdrop");
+  const subjects = [];
+  allQs.forEach(x => { const s = x.subject || "其他"; if (!subjects.includes(s)) subjects.push(s); });
+  const cur = q.subject || "其他";
+  body.innerHTML = "<h2>改学科</h2><p class='small'>现在是：" + PWQ.escapeHtml(cur) + "，点一个就改好，云端也会同步改。</p>" +
+    subjects.map(s => "<p><button type='button' class='bank-pill" + (s === cur ? " active" : "") + "' data-s='" + PWQ.escapeHtml(s) + "'>" + PWQ.escapeHtml(s) + "</button></p>").join("") +
+    "<p><button type='button' class='bank-pill' id='customSubjectBtn'>＋ 自定义学科…</button></p>";
+  body.querySelectorAll(".bank-pill[data-s]").forEach(btn => {
+    btn.onclick = async () => {
+      const ns = btn.dataset.s;
+      if (ns === cur) { closeSheet(); return; }
+      q.subject = ns;
+      try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); }
+      currentSubject = ns;
+      closeSheet();
+      renderList();
+      PWQ.toast("已改成" + ns + "。");
+    };
+  });
+  body.querySelector("#customSubjectBtn").onclick = async () => {
+    const ns = prompt("输入新学科名（比如：语文、物理）：", cur);
+    if (ns === null) return;
+    const v = ns.trim();
+    if (!v || v === cur) { closeSheet(); return; }
+    q.subject = v;
+    try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); }
+    currentSubject = v;
+    closeSheet();
+    renderList();
+    PWQ.toast("已改成" + v + "。");
+  };
+  sheet.classList.add("open");
+  backdrop.classList.add("show");
+}
+async function render(){
+  // 打开先画本机缓存（秒出），再在后台拉云端，拉到新的再画一次，不用干等好几秒。
+  try {
+    const cached = PWQ.getCachedQuestions ? PWQ.getCachedQuestions() : [];
+    if (cached.length) { allQs = sortNewToOld(cached); renderList(); }
+  } catch(e) {}
+  try { await PWQ.ready(); } catch(e) { PWQ.toast("云端同步失败，显示的是本机缓存，可下拉刷新再试。"); return; }
+  if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录，登录后这里才会显示你在云端的错题。</p>"; document.getElementById("pills").innerHTML = ""; return; }
+  allQs = sortNewToOld(PWQ.getQuestions());
+  renderList();
 }
 function openAnalysis(q){
   const sheet = document.getElementById("kpSheet");

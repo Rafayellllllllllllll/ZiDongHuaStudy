@@ -85,17 +85,39 @@ function isAdmin(){
   return !!(_profile && cfg.ADMIN_ACCOUNT && _profile.username === cfg.ADMIN_ACCOUNT && _profile.role === "admin") ||
          !!(_profile && cfg.ADMIN_ACCOUNT && _profile.role === "admin");
 }
+// 本机缓存：打开错题库先显示上次的题，不用等云端回来；云端回来后再刷新。
+// 缓存只按登录账号分开存，本机只存自己的题，换账号后按新账号重新拉。
+function saveCachedQuestions(){
+  try {
+    if (_profile && _profile.id && _questionsCache) {
+      localStorage.setItem("pwq_questions_cache_" + _profile.id, JSON.stringify(_questionsCache));
+      localStorage.setItem("pwq_last_user_id", _profile.id);
+    }
+  } catch(e){}
+}
+function getCachedQuestions(){
+  try {
+    const id = localStorage.getItem("pwq_last_user_id");
+    if (!id) return [];
+    const v = JSON.parse(localStorage.getItem("pwq_questions_cache_" + id) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch(e){ return []; }
+}
 // 兼容旧页面的同步读取：页面先 await PWQ.ready()，再用 getQuestions() 读缓存。
+// 优化：档案、错题、笔记本三路并行拉，以前是串行等三轮，现在只等最慢的一轮。
 async function ready(){
   if (!_readyPromise) {
     _readyPromise = (async () => {
       if (!window.supabaseClient) { _questionsCache = []; _notesCache = []; return; }
-      await loadProfile();
+      const results = await Promise.all([
+        loadProfile(),
+        window.supabaseClient.from("questions").select("*").order("created_at", { ascending: false }),
+        window.supabaseClient.from("notebook_items").select("*").order("created_at", { ascending: false })
+      ]);
       if (!_profile) { _questionsCache = []; _notesCache = []; return; }
-      const { data: qs } = await window.supabaseClient.from("questions").select("*").order("created_at", { ascending: false });
-      _questionsCache = (qs || []).map(toLocal);
-      const { data: ns } = await window.supabaseClient.from("notebook_items").select("*").order("created_at", { ascending: false });
-      _notesCache = (ns || []).map(n => ({ id: n.id, text: n.content, color: n.color }));
+      _questionsCache = ((results[1] && results[1].data) || []).map(toLocal);
+      saveCachedQuestions();
+      _notesCache = ((results[2] && results[2].data) || []).map(n => ({ id: n.id, text: n.content, color: n.color }));
     })();
   }
   return _readyPromise;
@@ -242,6 +264,7 @@ async function addQuestion(q){
   const local = toLocal(data);
   if (!_questionsCache) _questionsCache = [];
   _questionsCache.unshift(local);
+  saveCachedQuestions();
   return local;
 }
 async function updateQuestion(q){
@@ -251,16 +274,19 @@ async function updateQuestion(q){
     const idx = _questionsCache.findIndex(x => String(x.id) === String(q.id));
     if (idx >= 0) _questionsCache[idx] = q;
   }
+  saveCachedQuestions();
   const { error } = await window.supabaseClient.from("questions").update(toCloud(q, _profile.id)).eq("id", q.id);
   if (error) throw new Error("更新到云端失败：" + error.message);
 }
 async function deleteQuestion(id){
   if (_questionsCache) _questionsCache = _questionsCache.filter(x => String(x.id) !== String(id));
+  saveCachedQuestions();
   if (window.supabaseClient) await window.supabaseClient.from("questions").delete().eq("id", id);
 }
 function saveQuestions(qs){
   // 兼容旧页面：先更新缓存，再逐条异步写云端（不阻塞页面渲染）。
   _questionsCache = [...qs];
+  saveCachedQuestions();
   if (window.supabaseClient && _profile) {
     qs.forEach(q => {
       window.supabaseClient.from("questions").update(toCloud(q, _profile.id)).eq("id", q.id).then(() => {});
@@ -302,7 +328,7 @@ function store(key, fallback){
 function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 
 window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin,
-  toast, escapeHtml, cleanLatex, getQuestions, saveQuestions, explainPlaceholder,
+  toast, escapeHtml, cleanLatex, getQuestions, getCachedQuestions, saveQuestions, explainPlaceholder,
   ready, signInOrUp, signOut, signOutAll, addQuestion, updateQuestion, deleteQuestion,
   getKnowledgePoints, saveKnowledgePoints, kpId, isKnowledgeFavorited, toggleKnowledgePoint, linkKnowledgeToQuestion, extractKnowledgePoints,
   getNotes, addNote, updateNote, deleteNote, loadProfile };
