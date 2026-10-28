@@ -9,65 +9,91 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <title>拍照错题本 · 练习</title>
 <link rel="stylesheet" href="styles.css">
+<style>
+  /* 科目胶囊：一行横向排列，放不下横向滑动，不换行，不出滚动条 */
+  .subj-row{display:flex;gap:8px;overflow-x:auto;flex-wrap:nowrap;padding:4px 2px;margin:14px 0 18px;scrollbar-width:none;-ms-overflow-style:none}
+  .subj-row::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;margin:0;padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:#f7f0dd;color:var(--ink);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background-color .2s ease,color .2s ease,border-color .2s ease,transform .1s ease}
+  .chip:active{transform:scale(.96)}
+  .chip.selected{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:800}
+  .chip.disabled{opacity:.45;cursor:not-allowed}
+  .chip.disabled:active{transform:none}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>练习</h1>
-<p>先选科目，再选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。点开始练习会跳到新页面，一页一题，点选项自动下一题，答案等全部练完再一起出。</p>
-<label>练哪些科目？（可单选、多选，也可全选）</label>
 <div id="subjectArea"><p class="small">正在加载科目…</p></div>
-<p class="small" id="subjectTotal"></p>
 <label>这次练几道？（五的倍数，最多 50）</label>
 <select id="count"><option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option><option>35</option><option>40</option><option>45</option><option>50</option></select>
 <p><button id="start">开始练习</button>
 <button class="secondary" id="review">已掌握复查（隔一段时间抽查，骨架占位）</button></p>
-<p class="small">如果剩下未掌握的题不够你选的数，就按剩下的来。已经会了的题隔一段时间再抽查，抽查错了回到未掌握；按知识点生成同类题以后由 DeepSeek 生成，骨架里是占位按钮。</p>
 </div>
 </main><footer>云端版 · 练习计数存在 Supabase</footer>
 <script>
 let pool = [], idx = 0;
+let availableSubjects = [];
+let chipIsAll = true;
+let chipSelected = new Set();
 async function renderSubjects(){
   await PWQ.ready();
   const area = document.getElementById("subjectArea");
-  const totalEl = document.getElementById("subjectTotal");
-  if (!PWQ.currentUser()) { area.innerHTML = "<p>请先去登录页登录，登录后才能看到错题库的科目。</p>"; totalEl.textContent = ""; return; }
+  if (!PWQ.currentUser()) { area.innerHTML = "<p>请先去登录页登录，登录后才能看到错题库的科目。</p>"; return; }
   const all = PWQ.getQuestions();
-  // 科目和数量按错题库实时算，不写死：科目按错题库里出现的顺序，数量是该科目未掌握的题数。
+  // 科目按错题库里出现的顺序，不写死；只显示科目名，不带数量。
   const order = [];
-  const info = {};
+  const unmastered = {};
   all.forEach(q => {
     const s = q.subject || "其他";
-    if (!info[s]) { info[s] = { total: 0, unmastered: 0 }; order.push(s); }
-    info[s].total++;
-    if (!q.mastered) info[s].unmastered++;
+    if (!order.includes(s)) order.push(s);
+    if (!q.mastered) unmastered[s] = (unmastered[s] || 0) + 1;
   });
-  if (!order.length) { area.innerHTML = "<p>错题库里还没有题，先去录错题。</p>"; totalEl.textContent = ""; return; }
-  const items = order.map(s => {
-    const dis = info[s].unmastered === 0 ? " disabled" : "";
-    const chk = info[s].unmastered > 0 ? " checked" : "";
-    const label = info[s].unmastered === 0 ? PWQ.escapeHtml(s) + "（已全部掌握）" : PWQ.escapeHtml(s) + "（未掌握 " + info[s].unmastered + " 道）";
-    return "<label style='display:block;margin:6px 0'><input type='checkbox' class='subj' value='" + PWQ.escapeHtml(s) + "'" + chk + dis + "> " + label + "</label>";
+  if (!order.length) { area.innerHTML = "<p>错题库里还没有题，先去录错题。</p>"; return; }
+  availableSubjects = order.filter(s => (unmastered[s] || 0) > 0);
+  chipIsAll = true;
+  chipSelected = new Set();
+  const chips = order.map(s => {
+    const dis = (unmastered[s] || 0) === 0;
+    return "<button type='button' class='chip" + (dis ? " disabled" : "") + "' data-subject='" + PWQ.escapeHtml(s) + "'" + (dis ? " disabled" : "") + ">" + PWQ.escapeHtml(s) + "</button>";
   }).join("");
-  area.innerHTML = "<label style='display:block;margin:6px 0'><input type='checkbox' id='subjAll' checked> 全部科目</label>" + items;
-  function updateTotal(){
-    const sel = getSelectedSubjects();
-    const n = all.filter(q => !q.mastered && sel.includes(q.subject || "其他")).length;
-    totalEl.textContent = "已选科目共 " + n + " 道未掌握题，开始练习时会从里面随机出题。";
-    const allBox = document.getElementById("subjAll");
-    if (allBox) {
-      const boxes = Array.from(area.querySelectorAll(".subj")).filter(b => !b.disabled);
-      allBox.checked = boxes.length && boxes.every(b => b.checked);
-    }
-  }
-  area.querySelectorAll(".subj").forEach(b => b.addEventListener("change", updateTotal));
-  document.getElementById("subjAll").addEventListener("change", (e) => {
-    area.querySelectorAll(".subj").forEach(b => { if (!b.disabled) b.checked = e.target.checked; });
-    updateTotal();
+  area.innerHTML = "<div class='subj-row'><button type='button' class='chip selected' data-subject='__all__'>✓ 全部</button>" + chips + "</div>";
+  area.querySelectorAll(".chip").forEach(b => {
+    b.addEventListener("click", () => {
+      if (b.disabled) return;
+      const subj = b.dataset.subject;
+      if (subj === "__all__") {
+        // 点全部：选中全部，单个科目的选中状态取消，视觉上归为全部选中。
+        chipIsAll = true;
+        chipSelected = new Set();
+      } else {
+        // 点单个科目：自动取消全部，该科目切换选中/未选中，支持多选。
+        chipIsAll = false;
+        if (chipSelected.has(subj)) chipSelected.delete(subj); else chipSelected.add(subj);
+        // 一个都没选，自动回到全部，保证至少有一个选中项。
+        if (!chipSelected.size) { chipIsAll = true; chipSelected = new Set(); }
+        // 手动把所有单个科目都选上了，自动变回全部选中。
+        else if (availableSubjects.length && availableSubjects.every(s => chipSelected.has(s))) { chipIsAll = true; chipSelected = new Set(); }
+      }
+      updateChipState();
+    });
   });
-  updateTotal();
+  updateChipState();
+}
+function updateChipState(){
+  document.querySelectorAll("#subjectArea .chip").forEach(b => {
+    const subj = b.dataset.subject;
+    let sel = false;
+    if (subj === "__all__") sel = chipIsAll;
+    else sel = !chipIsAll && chipSelected.has(subj);
+    b.classList.toggle("selected", sel);
+    // 选中时文字左侧加小对勾，未选中时不加。
+    const name = subj === "__all__" ? "全部" : subj;
+    b.textContent = (sel ? "✓ " : "") + name;
+  });
 }
 function getSelectedSubjects(){
-  return Array.from(document.querySelectorAll(".subj")).filter(b => b.checked).map(b => b.value);
+  if (chipIsAll) return [...availableSubjects];
+  return [...chipSelected];
 }
 async function start(){
   await PWQ.ready();
