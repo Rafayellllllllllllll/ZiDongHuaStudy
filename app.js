@@ -28,12 +28,12 @@ function banner(){
 }
 function toast(msg){
   // 非阻塞提示：以前用 alert 会卡住页面，必须点确定才能继续，识别时就会一直转。
-  // 现在改成页面底部小条，3 秒自动消失，不挡操作、不卡识别。
+  // 现在改成屏幕顶部半透明小胶囊，3 秒自动消失：放上面、不放下面，拍照时不再盖住拍照和相册按钮。
   let el = document.getElementById("pwq-toast");
   if (!el) {
     el = document.createElement("div");
     el.id = "pwq-toast";
-    el.style.cssText = "position:fixed;left:16px;right:16px;bottom:80px;z-index:9999;background:#16233a;color:#fff;padding:12px 16px;border-radius:12px;text-align:center;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.2)";
+    el.style.cssText = "position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);width:max-content;z-index:9999;background:rgba(22,35,58,.75);color:#fff;padding:7px 14px;border-radius:999px;text-align:center;font-size:13px;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.18)";
     document.body.appendChild(el);
   }
   el.textContent = msg;
