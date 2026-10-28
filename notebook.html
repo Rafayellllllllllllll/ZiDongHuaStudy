@@ -10,7 +10,8 @@
   这一步只做外观，暂不实现功能：
   - 标题、正文可以像普通输入框一样打字（浏览器自带），但字数、日期、撤销/重做、保存、待办、格式、图片都还没有接线；
   - 唯一能点的功能是右上角的浅色/深色切换，那是第1步要验的主题部分。
-  第2步已做：标题/正文输入、实时字数、日期时间、占位提示、打开自动聚焦；键盘上移沿用第1步修订的 visualViewport。
+  第2步已做：标题/正文输入、实时字数、日期时间、占位提示、打开自动聚焦。
+  工具栏位置（2026-10-28 用户定）：底部控制栏位置不稳定，改到顶部，紧贴顶部栏下方，键盘弹起也不动；第1/2步里图片、待办、格式三个按钮只做外观，功能在第5/6/7步才接，点它没反应是正常的，不是坏了。
   已确认的修订（第1步补做）：
   - 配色跟错题本网站一致，不再纯黑纯白；
   - 底部工具栏平时在页面最下面一行，键盘弹出时跟随键盘上移，贴在键盘上面一行（见下面 visualViewport 代码）；
@@ -136,24 +137,13 @@
   /* 文字选择手柄/选区也用强调色（浏览器支持的部分） */
   .body-input::selection{background:var(--accent-soft)}
 
-  /* 键盘打开时的工具栏：脱离底部栏，固定在键盘上面一行。
-     --kb-bottom 优先用实测键盘高度，测不到时用 JS 按屏幕 42% 估算，宁可留一点空隙，也不要被盖住。 */
-  body.kb-open .toolbar{
-    position:fixed;
-    left:0; right:0;
-    bottom:var(--kb-bottom, env(keyboard-inset-height, 0px));
-    z-index:20;
-  }
-  body.kb-open .page{padding-bottom:64px}
   /* ========== 4. 底部工具栏 ========== */
   .toolbar{
     flex:0 0 auto;
-    /* 虚拟键盘 API 可用时，工具栏底部再顶起键盘高度，双保险 */
-    padding-bottom:calc(8px + env(safe-area-inset-bottom) + env(keyboard-inset-height, 0px));
     display:flex;
-    padding:8px 8px calc(8px + env(safe-area-inset-bottom) + env(keyboard-inset-height, 0px));
+    padding:8px;
     background:var(--toolbar-bg);
-    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
   }
   /* 3 个按钮等距排列 */
   .toolbar .icon-btn{flex:1}
@@ -189,6 +179,18 @@
       </button>
     </div>
   </header>
+  <!-- 工具栏（已移到顶部，紧贴顶部栏下方，键盘弹起也不动）：插入图片、待办清单、文字格式，等距排列（第1步只做外观，第5/6/7步才接功能） -->
+  <footer class="toolbar">
+    <button class="icon-btn" type="button" aria-label="插入图片" title="插入图片（第1步暂未接功能）">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-4 4"/></svg>
+    </button>
+    <button class="icon-btn" type="button" aria-label="待办清单" title="待办清单（第1步暂未接功能）">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+    </button>
+    <button class="icon-btn" type="button" aria-label="文字格式" title="文字格式（第1步暂未接功能）">
+      <span class="format-t">T</span>
+    </button>
+  </footer>
 
   <!-- 2. 标题区：单行大字标题 + 日期时间 | 字数的信息行（第1步是布局示例，第2步才接实时数据） -->
   <section class="title-area">
@@ -205,18 +207,6 @@
     <textarea class="body-input" placeholder="开始书写..." aria-label="正文" id="bodyInput"></textarea>
   </main>
 
-  <!-- 4. 底部工具栏：插入图片、待办清单、文字格式，等距排列（第1步只做外观和按压反馈） -->
-  <footer class="toolbar">
-    <button class="icon-btn" type="button" aria-label="插入图片" title="插入图片（第1步暂未接功能）">
-      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-4 4"/></svg>
-    </button>
-    <button class="icon-btn" type="button" aria-label="待办清单" title="待办清单（第1步暂未接功能）">
-      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
-    </button>
-    <button class="icon-btn" type="button" aria-label="文字格式" title="文字格式（第1步暂未接功能）">
-      <span class="format-t">T</span>
-    </button>
-  </footer>
 </div>
 
 <script>
@@ -242,46 +232,7 @@
   // 键盘弹出时，手机浏览器会把可视区域压小，visualViewport.height 就是键盘上面那一行的高度。
   // 把页面高度改成这个高度，工具栏就会跟着上移、贴在键盘上面一行，而不是被键盘盖住、也不会蹦到页面顶部。
   // 没有 visualViewport 的旧浏览器就保持原来的 100dvh，不会坏。
-  (function(){
-    // 初始位置修复：页面高度就是满屏 100dvh，不再用可视区域高度去改页面高度，
-    // 否则键盘收起后页面高度还卡在弹键盘时的矮高度，工具栏就飘在中间。
-    var baseline = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
-    function measuredKb(){
-      if (!window.visualViewport) return 0;
-      var kb = baseline - window.visualViewport.height;
-      // 封顶：键盘再大也不会超过屏幕一半，防止实测值偏大把工具栏顶得太高。
-      if (kb < 0) kb = 0;
-      if (kb > baseline * 0.5) kb = Math.round(baseline * 0.5);
-      return kb;
-    }
-    function applyKb(){
-      var kb = measuredKb();
-      document.documentElement.style.setProperty('--kb-bottom', kb + 'px');
-    }
-    document.addEventListener('focusin', function(e){
-      if (!e.target || (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) return;
-      document.body.classList.add('kb-open');
-      applyKb();
-      var n = 0;
-      var timer = setInterval(function(){ n++; applyKb(); if (n >= 8) clearInterval(timer); }, 200);
-    });
-    document.addEventListener('focusout', function(){
-      setTimeout(function(){
-        var ae = document.activeElement;
-        if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA')) {
-          // 键盘收起就彻底恢复：工具栏回最下面，键盘高度归零，不再留矮页面。
-          document.body.classList.remove('kb-open');
-          document.documentElement.style.setProperty('--kb-bottom', '0px');
-        }
-      }, 200);
-    });
-    try {
-      if (navigator.virtualKeyboard) {
-        navigator.virtualKeyboard.overlaysContent = true;
-        navigator.virtualKeyboard.addEventListener('geometrychange', applyKb);
-      }
-    } catch(e) {}
-  })();
+  // 工具栏已移到顶部（见下面结构），不再跟随键盘，不再算键盘高度，位置固定不跳。
   // 注意：第1步到此为止。返回、撤销、重做、完成、图片、待办、格式这几个按钮
   // 在这一步故意没有接点击逻辑，第2步起按顺序接。
 </script>
