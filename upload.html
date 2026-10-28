@@ -385,7 +385,8 @@ document.getElementById("recognize").onclick = async () => {
   const img = document.getElementById("photo");
   const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
   const anon = window.APP_CONFIG ? window.APP_CONFIG.SUPABASE_ANON_KEY : "";
-  const cards = await Promise.all(targets.map(async (target) => { const box = target.box;
+  let doneCount = 0;
+  const cards = await Promise.all(targets.map(async (target, idx) => { const box = target.box;
     let stem = "", options = [], suggested = "", subject = "其他", qkind = "选择题", explain_type = "定性辨析类";
     try {
       const canvas = document.createElement("canvas");
@@ -396,9 +397,11 @@ document.getElementById("recognize").onclick = async () => {
       const iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
       const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
       const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
-      canvas.width = Math.max(1, Math.round(sw)); canvas.height = Math.max(1, Math.round(sh));
+      // 识别提速：裁出来的图先压到最长边 1600 像素、质量 0.85 再发，手机原图几兆发过去又慢又没用，1600 像素读题干选项足够了。
+      const scale = Math.min(1, 1600 / Math.max(sw, sh));
+      canvas.width = Math.max(1, Math.round(sw * scale)); canvas.height = Math.max(1, Math.round(sh * scale));
       canvas.getContext("2d").drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.85);
       const res = await fetch(visionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anon, "apikey": anon },
@@ -413,7 +416,13 @@ document.getElementById("recognize").onclick = async () => {
         if (latin >= 10 && latin > chinese) subject = "英语";
       }
     } catch(e) { stem = ""; options = []; suggested = ""; subject = "其他"; }
-    return { stem, options, answer: suggested, subject, qkind, type: explain_type, explain: "" };
+    // 逐道先出：这道一回来就填进面板、显示已识别几道，不用等最慢的那道全回来才一起出。
+    const card = { stem, options, answer: suggested, subject, qkind, type: explain_type, explain: "" };
+    sheetCards[idx] = card;
+    doneCount++;
+    document.getElementById("ocrNote").textContent = "已识别 " + doneCount + " / " + targets.length + " 道…";
+    renderSheet();
+    return card;
   }));
   sheetCards = cards;
   sheetIndex = 0;

@@ -63,6 +63,7 @@ D. ……
           { type: "image_url", image_url: { url: image } },
         ] }],
         temperature: 0.2,
+        max_tokens: 1000,
       }),
     });
     if (!res.ok) {
