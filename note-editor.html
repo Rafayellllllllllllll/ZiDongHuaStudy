@@ -2,7 +2,7 @@
 <html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>笔记 · 第1步：界面布局</title>
 <!--
   笔记编辑页 · 第1步：只搭界面和布局
@@ -141,8 +141,10 @@
   /* ========== 4. 底部工具栏 ========== */
   .toolbar{
     flex:0 0 auto;
+    /* 虚拟键盘 API 可用时，工具栏底部再顶起键盘高度，双保险 */
+    padding-bottom:calc(8px + env(safe-area-inset-bottom) + env(keyboard-inset-height, 0px));
     display:flex;
-    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom) + env(keyboard-inset-height, 0px));
     background:var(--toolbar-bg);
     border-top:1px solid var(--line);
   }
@@ -235,8 +237,18 @@
   // 没有 visualViewport 的旧浏览器就保持原来的 100dvh，不会坏。
   (function(){
     function updateViewport(){
+      // 第一层：可视区域缩小（Chrome 等）时，页面高度跟着变，工具栏就贴到键盘上面。
       if (window.visualViewport) {
         document.documentElement.style.setProperty('--viewport-height', window.visualViewport.height + 'px');
+        // 第二层：如果可视区域没变（有的浏览器键盘是覆盖模式），用可视区域底部位置反推键盘高度，
+        // 把工具栏的底部顶起，避免被盖住。
+        var kb = Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
+        document.documentElement.style.setProperty('--keyboard-height', kb + 'px');
+        var tb0 = document.querySelector('.toolbar');
+        if (tb0) {
+          if (kb > 0) { tb0.style.paddingBottom = (8 + kb) + 'px'; }
+          else { tb0.style.paddingBottom = ''; }
+        }
       }
     }
     updateViewport();
@@ -245,6 +257,22 @@
       window.visualViewport.addEventListener('scroll', updateViewport);
     }
     window.addEventListener('resize', updateViewport);
+    // 第三层：虚拟键盘 API 可用时，让浏览器不要用覆盖模式，改成压缩布局，工具栏自然在键盘上面。
+    try {
+      if (navigator.virtualKeyboard) {
+        navigator.virtualKeyboard.overlaysContent = false;
+        navigator.virtualKeyboard.addEventListener('geometrychange', updateViewport);
+      }
+    } catch(e) {}
+    // 第四层：点输入框、键盘动画还没走完时，再补两次刷新，并把工具栏滚进可视区。
+    document.addEventListener('focusin', function(){
+      setTimeout(updateViewport, 300);
+      setTimeout(updateViewport, 600);
+      setTimeout(function(){
+        var tb = document.querySelector('.toolbar');
+        if (tb) { try { tb.scrollIntoView({block: 'nearest'}); } catch(e) {} }
+      }, 600);
+    });
   })();
   // 注意：第1步到此为止。返回、撤销、重做、完成、图片、待办、格式这几个按钮
   // 在这一步故意没有接点击逻辑，第2步起按顺序接。
