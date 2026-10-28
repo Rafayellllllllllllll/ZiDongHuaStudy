@@ -253,3 +253,7 @@ main.zyb-full{padding-bottom:80px}
 
 /* 错题库：左上角学科标签可点改，按钮外观跟原来标签一样大，不改卡片比例 */
 .bank-main .bank-tags .tag-subject{border:0;cursor:pointer;font:inherit;background:var(--tag-bg);color:var(--ink)}
+
+/* 主页底栏加高：原来上下只有 8-10px，点起来窄；现在上下 16-20px、字 15px，点击区更宽更好点 */
+.bottomnav{padding:16px 0 calc(20px + env(safe-area-inset-bottom))}
+.bottomnav a{font-size:15px;padding:6px 8px}
