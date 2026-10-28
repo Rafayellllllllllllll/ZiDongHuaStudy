@@ -9,14 +9,21 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <title>拍照错题本 · 知识点</title>
 <link rel="stylesheet" href="styles.css">
+<style>
+  /* 知识点顶部：标题和搜索同一行，学科胶囊紧贴其下、左边缘对齐，尺寸跟错题库/练习的筛选胶囊统一（高 34px、字 13px、左右 12px、间距 8px） */
+  .kp-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 14px}
+  .kp-top h1{margin:0;flex:1;min-width:0}
+  .kp-top #searchBtn{margin:0;padding:8px 16px;font-size:14px;flex:0 0 auto;white-space:nowrap}
+  #pills{padding:0 0 4px;margin:0 0 4px;gap:8px}
+  #pills .bank-pill{height:34px;padding:0 12px;margin:0 8px 0 0;font-size:13px;line-height:34px;display:inline-flex;align-items:center}
+  #list{transition:opacity .2s ease}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
-<div class="card"><h1>知识点</h1>
-<p class="small">收藏的知识点都在这里。</p>
-<p><button type="button" class="secondary" id="searchBtn">搜索</button></p>
-<div id="searchBox" class="hidden"><input id="searchInput" placeholder="按知识点名称搜索"><button type="button" class="secondary" id="clearSearch">清除搜索</button></div>
+<div class="card"><div class="kp-top"><h1>知识点</h1><button type="button" class="secondary" id="searchBtn">搜索</button></div>
 <div id="pills" class="pills-scroll"></div>
+<div id="searchBox" class="hidden"><input id="searchInput" placeholder="按知识点名称搜索"><button type="button" class="secondary" id="clearSearch">清除搜索</button></div>
 <p id="countText" class="small"></p>
 <div id="list"></div>
 <div id="empty" class="hidden"><p>还没有收藏知识点</p><p class="small">在错题解析中点击知识点旁边的星标，就能将知识点收集到这里。</p><p><a class="btn" href="bank.html">去错题本</a></p></div>
@@ -28,15 +35,19 @@
 <script>
 let currentSubject = "全部";
 let searchText = "";
-function render(){
+function render(fade){
   const all = PWQ.getKnowledgePoints();
+  // 学科来自错题本里已收录的学科，按错题出现顺序，有新学科自动出现在后面；没有错题时只留“全部”。
+  // 已有收藏如果没有学科字段，不单独成一个标签，只在“全部”里显示，不报错、不丢失。
   const subjects = ["全部"];
-  all.forEach(k => { if (!subjects.includes(k.subject)) subjects.push(k.subject); });
+  try {
+    PWQ.getQuestions().forEach(q => { const s = q.subject || "其他"; if (!subjects.includes(s)) subjects.push(s); });
+  } catch(e) {}
   if (currentSubject !== "全部" && !subjects.includes(currentSubject)) currentSubject = "全部";
   const pills = document.getElementById("pills");
-  pills.innerHTML = subjects.map(s => "<button type='button' class='bank-pill" + (s === currentSubject ? " active" : "") + "' data-s='" + s + "'>" + s + "</button>").join("");
-  pills.querySelectorAll(".bank-pill").forEach(btn => { btn.onclick = () => { currentSubject = btn.dataset.s; render(); }; });
-  let filtered = all.filter(k => (currentSubject === "全部" || k.subject === currentSubject) && (!searchText || k.name.includes(searchText)));
+  pills.innerHTML = subjects.map(s => "<button type='button' class='bank-pill" + (s === currentSubject ? " active" : "") + "' data-s='" + PWQ.escapeHtml(s) + "'>" + PWQ.escapeHtml(s) + "</button>").join("");
+  pills.querySelectorAll(".bank-pill").forEach(btn => { btn.onclick = () => { currentSubject = btn.dataset.s; render(true); }; });
+  let filtered = all.filter(k => (currentSubject === "全部" || k.subject === currentSubject) && (!searchText || (k.name || "").includes(searchText)));
   document.getElementById("countText").textContent = "已收藏 " + filtered.length + " 个知识点";
   const list = document.getElementById("list");
   const empty = document.getElementById("empty");
@@ -44,7 +55,7 @@ function render(){
   if (!all.length) { empty.classList.remove("hidden"); empty.querySelector("p").textContent = "还没有收藏知识点"; return; }
   if (!filtered.length) {
     empty.classList.remove("hidden");
-    empty.querySelector("p").textContent = searchText ? "没有找到相关知识点" : "这个学科下还没有知识点";
+    empty.querySelector("p").textContent = searchText ? "没有找到相关知识点" : "该学科还没有收藏知识点";
     return;
   }
   empty.classList.add("hidden");
@@ -62,6 +73,13 @@ function render(){
     d.onclick = (e) => { if (e.target.closest(".kp-star")) return; openDetail(k); };
     list.appendChild(d);
   });
+  if (fade) {
+    const listEl = document.getElementById("list");
+    listEl.style.opacity = "0";
+    requestAnimationFrame(() => { listEl.style.opacity = "1"; });
+  } else {
+    document.getElementById("list").style.opacity = "1";
+  }
 }
 function openDetail(k){
   const sheet = document.getElementById("kpSheet");
