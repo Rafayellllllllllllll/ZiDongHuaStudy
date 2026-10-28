@@ -56,7 +56,6 @@
     background:var(--bg);
     color:var(--text);
     height:100dvh;
-    height:var(--viewport-height, 100dvh);
     /* 主题切换时颜色平滑过渡，不要太花哨 */
     transition:background-color .2s ease,color .2s ease;
   }
@@ -65,7 +64,6 @@
   .page{
     max-width:720px;
     height:100dvh;
-    height:var(--viewport-height, 100dvh);
     margin:0 auto;
     display:flex;
     flex-direction:column;
@@ -245,66 +243,44 @@
   // 把页面高度改成这个高度，工具栏就会跟着上移、贴在键盘上面一行，而不是被键盘盖住、也不会蹦到页面顶部。
   // 没有 visualViewport 的旧浏览器就保持原来的 100dvh，不会坏。
   (function(){
-    var toolbar = document.querySelector('.toolbar');
+    // 初始位置修复：页面高度就是满屏 100dvh，不再用可视区域高度去改页面高度，
+    // 否则键盘收起后页面高度还卡在弹键盘时的矮高度，工具栏就飘在中间。
+    var baseline = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
     function measuredKb(){
-      if (window.visualViewport) {
-        return Math.max(0, window.innerHeight - window.visualViewport.height - (window.visualViewport.offsetTop || 0));
-      }
-      return 0;
-    }
-    function updateViewport(){
-      if (window.visualViewport) {
-        document.documentElement.style.setProperty('--viewport-height', window.visualViewport.height + 'px');
-      }
+      if (!window.visualViewport) return 0;
+      var kb = baseline - window.visualViewport.height;
+      // 封顶：键盘再大也不会超过屏幕一半，防止实测值偏大把工具栏顶得太高。
+      if (kb < 0) kb = 0;
+      if (kb > baseline * 0.5) kb = Math.round(baseline * 0.5);
+      return kb;
     }
     function applyKb(){
       var kb = measuredKb();
-      var dbg = document.getElementById('kbDebug');
-      if (dbg) {
-        var vvH = window.visualViewport ? window.visualViewport.height : -1;
-        var vvT = window.visualViewport ? window.visualViewport.offsetTop : -1;
-        dbg.textContent = '调试：内高' + window.innerHeight + ' 可视高' + vvH + ' 偏移' + vvT + ' 键盘估' + kb;
-      }
-      // 测不到键盘高度时（有的浏览器键盘是覆盖模式，不报高度），按截图里键盘约占屏幕 42% 估算。
-      if (kb < 50) { kb = Math.round(window.innerHeight * 0.42); }
       document.documentElement.style.setProperty('--kb-bottom', kb + 'px');
-      updateViewport();
     }
-    updateViewport();
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateViewport);
-      window.visualViewport.addEventListener('scroll', updateViewport);
-    }
-    window.addEventListener('resize', updateViewport);
-    // 虚拟键盘 API 可用时，让它覆盖内容，这样 env(keyboard-inset-height) 才能报出键盘高度。
+    document.addEventListener('focusin', function(e){
+      if (!e.target || (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) return;
+      document.body.classList.add('kb-open');
+      applyKb();
+      var n = 0;
+      var timer = setInterval(function(){ n++; applyKb(); if (n >= 8) clearInterval(timer); }, 200);
+    });
+    document.addEventListener('focusout', function(){
+      setTimeout(function(){
+        var ae = document.activeElement;
+        if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA')) {
+          // 键盘收起就彻底恢复：工具栏回最下面，键盘高度归零，不再留矮页面。
+          document.body.classList.remove('kb-open');
+          document.documentElement.style.setProperty('--kb-bottom', '0px');
+        }
+      }, 200);
+    });
     try {
       if (navigator.virtualKeyboard) {
         navigator.virtualKeyboard.overlaysContent = true;
         navigator.virtualKeyboard.addEventListener('geometrychange', applyKb);
       }
     } catch(e) {}
-    // 点输入框就进入键盘模式：工具栏固定到键盘上面；键盘动画走完前多测几次，实测到高度就替换估算值。
-    document.addEventListener('focusin', function(e){
-      if (!e.target || (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA')) return;
-      document.body.classList.add('kb-open');
-      applyKb();
-      var n = 0;
-      var timer = setInterval(function(){
-        n++;
-        applyKb();
-        if (n >= 8) clearInterval(timer);
-      }, 200);
-    });
-    // 离开输入框（切到另一个输入框时 focusin 会先到，不会误关）就恢复底部栏。
-    document.addEventListener('focusout', function(){
-      setTimeout(function(){
-        var ae = document.activeElement;
-        if (!ae || (ae.tagName !== 'INPUT' && ae.tagName !== 'TEXTAREA')) {
-          document.body.classList.remove('kb-open');
-          document.documentElement.style.setProperty('--kb-bottom', '0px');
-        }
-      }, 200);
-    });
   })();
   // 注意：第1步到此为止。返回、撤销、重做、完成、图片、待办、格式这几个按钮
   // 在这一步故意没有接点击逻辑，第2步起按顺序接。
