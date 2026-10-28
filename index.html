@@ -9,11 +9,13 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <title>拍照错题本 · 登录</title>
 <link rel="stylesheet" href="styles.css">
+<style>.my-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
-<div class="card hidden" id="myCard"><div class="my-profile"><div class="my-avatar" id="myAvatar">我</div><div class="my-name" id="myName"></div><div class="my-email" id="myEmail"></div><p><button type="button" id="myLogoutBtn">退出登录</button></p><p><button type="button" class="secondary" id="myLogoutAllBtn">退出所有设备</button></p><p class="small">退出后才会重新出现登录界面。</p></div></div>
-<div class="card" id="loginCard"><h1>第一次使用，先注册登录</h1>
+<div class="card hidden" id="myCard"><div class="my-profile"><div class="my-avatar" id="myAvatar">我</div><div class="my-name" id="myName"></div><div class="my-email" id="myEmail"></div><p><button type="button" class="secondary" id="myChangeAvatarBtn">更改头像</button><input type="file" id="myAvatarFile" accept="image/*" style="display:none"></p><p id="myAdminLink" class="hidden"><a class="btn secondary" href="admin.html">管理</a></p><p><button type="button" id="myLogoutBtn">退出登录</button></p><p><button type="button" class="secondary" id="myLogoutAllBtn">退出所有设备</button></p><p class="small">退出后才会重新出现登录界面。</p></div></div>
+<div class="card" id="loadingCard"><p>正在加载账号…</p></div>
+<div class="card hidden" id="loginCard"><h1>第一次使用，先注册登录</h1>
 <p>每个人用自己的账号登录，各人数据独立，互相看不到。分享给朋友时，把网站链接发给朋友，朋友自己注册自己的账号。</p>
 <p class="small">一个设备上登录一次后保持登录，之后再打开不用再填；只有主动退出或清浏览器数据，才需要重新填。数据存在云端，换设备登录同一个账号，错题和笔记本都在。</p>
 <p id="who" class="small"></p>
@@ -37,18 +39,24 @@
   const u = PWQ.currentUser();
   const params = new URLSearchParams(location.search);
   const isMy = params.get("account") === "1";
+  const loading = document.getElementById("loadingCard");
+  if (loading) loading.classList.add("hidden");
   if (u && !isMy) { location.href = "home.html"; return; }
   if (u && isMy) {
     // 我的页面：从上往下依次是头像、名字、邮箱、退出登录，登录表单和注册说明全部藏起来
     document.getElementById("loginCard").classList.add("hidden");
     const myCard = document.getElementById("myCard");
     myCard.classList.remove("hidden");
-    document.getElementById("myAvatar").textContent = (u.username || "我").slice(0,1);
+    const av = document.getElementById("myAvatar");
+    if (u.avatar_url) { av.innerHTML = ""; const im = document.createElement("img"); im.src = u.avatar_url; im.alt = ""; av.appendChild(im); }
+    else av.textContent = (u.username || "我").slice(0,1);
     document.getElementById("myName").textContent = u.username + (u.role === "admin" ? "（管理员）" : "");
     document.getElementById("myEmail").textContent = u.email || "邮箱：未填";
+    if (PWQ.isAdmin()) document.getElementById("myAdminLink").classList.remove("hidden");
     document.getElementById("who").textContent = "";
     return;
   }
+  document.getElementById("loginCard").classList.remove("hidden");
   if (u) {
     document.getElementById("who").textContent = "当前已登录：" + u.username + (u.role === "admin" ? "（管理员）" : "");
     document.getElementById("username").value = u.username;
@@ -71,6 +79,27 @@ document.getElementById("f").addEventListener("submit", async e => {
 });
 document.getElementById("myLogoutBtn").onclick = async () => { await PWQ.signOut(); location.reload(); };
 document.getElementById("myLogoutAllBtn").onclick = async () => { if (!confirm("退出所有设备后，所有设备都要重新登录，确定吗？")) return; await PWQ.signOutAll(); location.reload(); };
+document.getElementById("myChangeAvatarBtn").onclick = () => { document.getElementById("myAvatarFile").click(); };
+document.getElementById("myAvatarFile").addEventListener("change", async () => {
+  const file = document.getElementById("myAvatarFile").files && document.getElementById("myAvatarFile").files[0];
+  document.getElementById("myAvatarFile").value = "";
+  if (!file) return;
+  const u = PWQ.currentUser();
+  if (!u) { PWQ.toast("请先登录"); return; }
+  try {
+    const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+    const url = await new Promise((res, rej) => { const im = new Image(); im.onload = () => {
+      const size = Math.min(im.width, im.height); const sx = (im.width - size) / 2, sy = (im.height - size) / 2;
+      const cv = document.createElement("canvas"); cv.width = 256; cv.height = 256;
+      cv.getContext("2d").drawImage(im, sx, sy, size, size, 0, 0, 256, 256);
+      res(cv.toDataURL("image/jpeg", 0.85));
+    }; im.onerror = rej; im.src = dataUrl; });
+    const { error } = await window.supabaseClient.from("profiles").update({ avatar_url: url }).eq("id", u.id);
+    if (error) throw error;
+    const av = document.getElementById("myAvatar"); av.innerHTML = ""; const im2 = document.createElement("img"); im2.src = url; im2.alt = ""; av.appendChild(im2);
+    PWQ.toast("头像已更改，换设备登录同一个账号也能看到。");
+  } catch(e) { PWQ.toast("更改头像失败：" + String(e.message || e)); }
+});
 document.getElementById("logoutBtn").onclick = async () => {
   await PWQ.signOut();
   PWQ.toast("已退出本机登录。");

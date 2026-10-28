@@ -17,6 +17,10 @@
 <div id="denied" class="warn hidden">当前账号不是管理员，或未配置管理员账号（config.js 里的 ADMIN_ACCOUNT），所以看不到管理数据。管理员需要在网站上用 Rafayellllllllllllll 注册成功后，由后台标成管理员，才能看到这里。</div>
 <div id="ok" class="hidden">
 <table><tr><th>账号</th><th>登录时间</th></tr><tbody id="rows"></tbody></table>
+<h2>各账号 token 总量</h2>
+<p class="small" id="tokenNote">按账号汇总 DeepSeek 调用（拍照识别 + 解析）用过的 token，含输入和输出。0 表示该账号登录过但还没产生过 token 记录。</p>
+<table><tr><th>账号</th><th>调用次数</th><th>输入 token</th><th>输出 token</th><th>总 token</th><th>最后使用</th></tr><tbody id="tokenRows"></tbody></table>
+<p class="small" id="tokenEmpty" style="display:none">还没有 token 记录：需要先在 Supabase 里运行 supabase/token_usage.sql 建表，并重新部署 explain / vision 函数，之后的使用才会开始按账号累计。以前的调用没有记录用量，无法找回历史总量。</p>
 <p class="small">登录记录只记账号和登录时间，不记错题内容。注册时不特意向朋友说明管理员能看到这些使用记录（按用户对齐）。</p>
 <p><button class="secondary" id="logoutAll">一键退出所有设备</button></p>
 </div></div>
@@ -43,6 +47,37 @@
     });
   } catch(e) {
     document.getElementById("rows").innerHTML = "<tr><td colspan='2'>读取登录记录失败：" + PWQ.escapeHtml(String(e.message || e)) + "</td></tr>";
+  }
+  // token 总量：先取登录账号，再取 token_usage 聚合，登录过但没用过 token 的账号也列出来，总数是 0。
+  try {
+    const loginData = await window.supabaseClient.from("login_records").select("username").limit(500);
+    const loginNames = [...new Set(((loginData && loginData.data) || []).map(r => r.username).filter(Boolean))];
+    const { data: tok, error: tokErr } = await window.supabaseClient.from("token_usage").select("username,prompt_tokens,completion_tokens,total_tokens,created_at").limit(5000);
+    if (tokErr) throw tokErr;
+    const agg = {};
+    (tok || []).forEach(r => {
+      const name = r.username || "未知";
+      if (!agg[name]) agg[name] = { calls: 0, prompt: 0, comp: 0, total: 0, last: "" };
+      agg[name].calls += 1; agg[name].prompt += r.prompt_tokens || 0; agg[name].comp += r.completion_tokens || 0; agg[name].total += r.total_tokens || 0;
+      if (r.created_at && (!agg[name].last || r.created_at > agg[name].last)) agg[name].last = r.created_at;
+    });
+    const names = [...new Set([...loginNames, ...Object.keys(agg)])];
+    const rowsEl = document.getElementById("tokenRows");
+    if (!names.length) { rowsEl.innerHTML = "<tr><td colspan='6'>还没有登录记录。</td></tr>"; }
+    else {
+      names.sort((a, b) => ((agg[b] && agg[b].total) || 0) - ((agg[a] && agg[a].total) || 0));
+      rowsEl.innerHTML = "";
+      names.forEach(name => {
+        const a = agg[name] || { calls: 0, prompt: 0, comp: 0, total: 0, last: "" };
+        const tr = document.createElement("tr");
+        const fmt = n => Number(n || 0).toLocaleString();
+        tr.innerHTML = "<td>" + PWQ.escapeHtml(name) + "</td><td>" + a.calls + "</td><td>" + fmt(a.prompt) + "</td><td>" + fmt(a.comp) + "</td><td>" + fmt(a.total) + "</td><td>" + (a.last ? new Date(a.last).toLocaleString() : "—") + "</td>";
+        rowsEl.appendChild(tr);
+      });
+    }
+  } catch(e) {
+    document.getElementById("tokenRows").innerHTML = "<tr><td colspan='6'>还没有 token 记录或读取失败。</td></tr>";
+    document.getElementById("tokenEmpty").style.display = "block";
   }
 })();
 document.getElementById("logoutAll").onclick = async () => {

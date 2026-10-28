@@ -408,6 +408,7 @@ document.getElementById("recognize").onclick = async () => {
         body: JSON.stringify({ image: cropDataUrl }),
       });
       const data = await res.json();
+      if (data.usage && PWQ.recordTokenUsage) { try { await PWQ.recordTokenUsage({ model: "deepseek-flash", function_name: "vision", usage: data.usage }); } catch(e) {} }
       stem = PWQ.cleanLatex(data.stem || ""); options = (data.options || []).map(o => PWQ.cleanLatex(o)); suggested = data.suggested_answer || ""; subject = data.subject || "其他"; qkind = data.qkind || "选择题"; explain_type = data.explain_type || "定性辨析类";
       // 前端兜底：后端还没更新或模型只给了“其他”时，英文题干先自动判成英语，不直接丢给用户手动改；错了点题号旁的小药丸还能改。
       if (subject === "其他" && stem) {

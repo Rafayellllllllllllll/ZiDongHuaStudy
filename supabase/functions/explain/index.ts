@@ -44,7 +44,8 @@ serve(async (req) => {
     }
     const data = await res.json();
     const explain = data?.choices?.[0]?.message?.content || "";
-    return new Response(JSON.stringify({ explain }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const usage = data?.usage || {};
+    return new Response(JSON.stringify({ explain, usage: { prompt_tokens: usage.prompt_tokens || 0, completion_tokens: usage.completion_tokens || 0, total_tokens: usage.total_tokens || 0 } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

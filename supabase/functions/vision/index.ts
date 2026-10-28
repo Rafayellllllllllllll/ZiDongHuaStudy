@@ -73,7 +73,8 @@ D. ……
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content || "";
     if (text.includes("读不出来")) {
-      return new Response(JSON.stringify({ stem: "", options: [], note: "读不出来" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const usage0 = data?.usage || {};
+      return new Response(JSON.stringify({ stem: "", options: [], note: "读不出来", usage: { prompt_tokens: usage0.prompt_tokens || 0, completion_tokens: usage0.completion_tokens || 0, total_tokens: usage0.total_tokens || 0 } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     // 解析题干和选项
     const stemMatch = text.match(/题干[：:]\s*([\s\S]*?)(?:\n选项[：:]|\nA[\.、．])/);
@@ -104,7 +105,8 @@ D. ……
       else if (/力学|电学|光学|力学|电流|电压|电阻/.test(stem)) subject = "物理";
       else if (/编程|算法|AI|人工智能|硬件|CPU|内存/.test(stem)) subject = "计算机";
     }
-    return new Response(JSON.stringify({ stem, options, suggested_answer, subject, qkind, explain_type, raw: text }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const usage = data?.usage || {};
+    return new Response(JSON.stringify({ stem, options, suggested_answer, subject, qkind, explain_type, raw: text, usage: { prompt_tokens: usage.prompt_tokens || 0, completion_tokens: usage.completion_tokens || 0, total_tokens: usage.total_tokens || 0 } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

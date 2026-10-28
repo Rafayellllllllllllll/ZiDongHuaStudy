@@ -9,17 +9,12 @@
 <link rel="apple-touch-icon" href="icon.svg">
 <title>拍照错题本 · 主页</title>
 <link rel="stylesheet" href="styles.css">
+<style>.avatar{cursor:default}.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script><script src="app.js"></script>
 </head><body>
 <header class="home-head"><div class="logo">拍照<span>错题本</span></div>
-<div id="avatar" class="avatar" title="点开账号菜单">我</div></header>
-<div id="menu" class="avatar-menu hidden">
-<p id="who" class="small"></p>
-<p><a href="index.html?account=1">我的账号 / 退出</a></p>
-<p id="adminLink" class="hidden"><a href="admin.html">管理后台（仅管理员）</a></p>
-<p><button class="secondary" id="logoutBtn">退出登录</button></p>
-</div>
+<div id="avatar" class="avatar">我</div></header>
 <main>
 <a class="btn big-photo" href="upload.html">拍照搜改题</a>
 <div class="grid2">
@@ -41,9 +36,9 @@
   await PWQ.ready();
   const u = PWQ.currentUser();
   if (!u) { location.href = "index.html"; return; }
-  document.getElementById("who").textContent = "当前账号：" + u.username + (u.role === "admin" ? "（管理员）" : "");
-  document.getElementById("avatar").textContent = (u.username || "我").slice(0, 1);
-  if (PWQ.isAdmin()) document.getElementById("adminLink").classList.remove("hidden");
+  const av = document.getElementById("avatar");
+  if (u.avatar_url) { av.innerHTML = ""; const im = document.createElement("img"); im.src = u.avatar_url; im.alt = ""; av.appendChild(im); }
+  else av.textContent = (u.username || "我").slice(0, 1);
   const qs = PWQ.getQuestions();
   const today = new Date().toISOString().slice(0, 10);
   // created_at 是云端时间戳，本地日期按 ISO 日期粗算，今天题数以题库里今天创建的为准，旧题没有 created_at 时不计。
@@ -51,11 +46,4 @@
   const mastered = qs.filter(q => q.mastered).length;
   document.getElementById("stats").textContent = "今天：已记录 " + todayCount + " 题 · 错题库共 " + qs.length + " 题 · 已掌握 " + mastered + " 题（点进错题库看统计）";
 })();
-document.getElementById("avatar").onclick = () => {
-  document.getElementById("menu").classList.toggle("hidden");
-};
-document.getElementById("logoutBtn").onclick = async () => {
-  await PWQ.signOut();
-  location.href = "index.html";
-};
 </script></body></html>

@@ -309,10 +309,20 @@ async function deleteNote(id){
   if (_notesCache) _notesCache = _notesCache.filter(x => String(x.id) !== String(id));
   if (window.supabaseClient) await window.supabaseClient.from("notebook_items").delete().eq("id", id);
 }
+async function recordTokenUsage(opts){
+  try {
+    if (!window.supabaseClient || !_profile) return;
+    const usage = (opts && opts.usage) || {};
+    const total = usage.total_tokens || ((usage.prompt_tokens || 0) + (usage.completion_tokens || 0));
+    if (!total) return;
+    await window.supabaseClient.from("token_usage").insert({ owner_id: _profile.id, username: _profile.username, model: opts.model || "", function_name: opts.function_name || "", prompt_tokens: usage.prompt_tokens || 0, completion_tokens: usage.completion_tokens || 0, total_tokens: total });
+  } catch(e) { /* token_usage 表还没建时不打断解析/识别主流程 */ }
+}
 async function explainPlaceholder(q){
   try {
     if (window.supabaseClient) {
       const res = await window.supabaseClient.functions.invoke("explain", { body: { stem: q.stem, options: q.options, correct_answer: q.answer, explain_type: q.type } });
+      if (res && res.data && res.data.usage) await recordTokenUsage({ model: "deepseek-chat", function_name: "explain", usage: res.data.usage });
       if (res && res.data && res.data.explain) return res.data.explain;
       if (res && res.error) throw new Error(String(res.error.message || res.error));
     }
@@ -330,7 +340,7 @@ function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
 window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin,
   toast, escapeHtml, cleanLatex, getQuestions, getCachedQuestions, saveQuestions, explainPlaceholder,
   ready, signInOrUp, signOut, signOutAll, addQuestion, updateQuestion, deleteQuestion,
-  getKnowledgePoints, saveKnowledgePoints, kpId, isKnowledgeFavorited, toggleKnowledgePoint, linkKnowledgeToQuestion, extractKnowledgePoints,
+  getKnowledgePoints, saveKnowledgePoints, kpId, isKnowledgeFavorited, toggleKnowledgePoint, linkKnowledgeToQuestion, extractKnowledgePoints, recordTokenUsage,
   getNotes, addNote, updateNote, deleteNote, loadProfile };
 document.addEventListener("DOMContentLoaded", banner);
 })();
