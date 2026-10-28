@@ -16,7 +16,7 @@
   .run-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px}
   .run-foot button{margin:0}
   .run-foot .back-btn:disabled{opacity:.45}
-  /* 点选项的瞬间反馈：先变绿闪一下，再自动下一题 */
+  /* 点选项的瞬间反馈：先变绿闪 0.25 秒，再自动下一题 */
   .opt.flash{background:#2e7d32 !important;border-color:#2e7d32 !important;color:#fff !important}
 </style>
 </head><body>
@@ -62,8 +62,9 @@ function show(){
     opts + unsureNote + noOptNote +
     "<div class='run-foot'><button type='button' class='secondary back-btn' id='backBtn'" + (idx === 0 ? " disabled" : "") + ">← 返回上一题</button>" +
     "<button type='button' class='secondary' id='unsureBtn'>不确定</button></div></div>";
-  // 点选项：先变绿闪一下，再自动下一题，不用再点提交或下一题。
-  // 0.01 秒比一帧还短，浏览器来不及画出来就跳了，所以先等一帧把绿色画出来，再等 0.01 秒跳，实际看到的是一闪而过的绿色。
+  // 点选项：先变绿闪 0.25 秒，再自动下一题，不用再点提交或下一题。
+  // 0.25 秒是网上常见的正常速度：小元素反馈一般 200-300 毫秒，Material 的点击波纹也是 200 毫秒左右；
+  // 先等一帧把绿色画出来，再等 250 毫秒跳，绿色能看清，又不会拖慢练题节奏（仍在 400 毫秒的流畅感界限内）。
   let advancing = false;
   card.querySelectorAll(".opt").forEach(b => {
     b.onclick = () => {
@@ -72,7 +73,7 @@ function show(){
       card.querySelectorAll(".opt").forEach(x => x.disabled = true);
       b.classList.add("flash");
       answer(idx, b.dataset.ans, false);
-      requestAnimationFrame(() => setTimeout(() => { advancing = false; advance(); }, 10));
+      requestAnimationFrame(() => setTimeout(() => { advancing = false; advance(); }, 250));
     };
   });
   document.getElementById("backBtn").onclick = () => {
