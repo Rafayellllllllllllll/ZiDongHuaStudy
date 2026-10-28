@@ -109,11 +109,27 @@ async function ready(){
   if (!_readyPromise) {
     _readyPromise = (async () => {
       if (!window.supabaseClient) { _questionsCache = []; _notesCache = []; return; }
-      const results = await Promise.all([
+      // 2026-10-28 教训：朋友网络慢/连不上 Supabase 时，三个云端请求会一直挂着，页面就永远卡在“正在加载”；
+      // 所以 ready 最多等 8 秒，超时先按已有数据（本地缓存）返回，后台请求回来后再把缓存写进本地存储，下次打开就能用。
+      const all = Promise.all([
         loadProfile(),
         window.supabaseClient.from("questions").select("*").order("created_at", { ascending: false }),
         window.supabaseClient.from("notebook_items").select("*").order("created_at", { ascending: false })
       ]);
+      all.then(results => {
+        if (_profile) {
+          try { _questionsCache = ((results[1] && results[1].data) || []).map(toLocal); saveCachedQuestions(); } catch(e) {}
+          try { _notesCache = ((results[2] && results[2].data) || []).map(n => ({ id: n.id, text: n.content, color: n.color })); } catch(e) {}
+        }
+      }).catch(() => {});
+      const timeout = new Promise(res => setTimeout(() => res("timeout"), 8000));
+      const results = await Promise.race([all, timeout]);
+      if (results === "timeout") {
+        if (!_profile) { _questionsCache = []; _notesCache = []; return; }
+        const cached = getCachedQuestions();
+        if (cached && cached.length) _questionsCache = cached;
+        return;
+      }
       if (!_profile) { _questionsCache = []; _notesCache = []; return; }
       _questionsCache = ((results[1] && results[1].data) || []).map(toLocal);
       saveCachedQuestions();

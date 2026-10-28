@@ -19,6 +19,7 @@
 <p>每个人用自己的账号登录，各人数据独立，互相看不到。分享给朋友时，把网站链接发给朋友，朋友自己注册自己的账号。</p>
 <p class="small">一个设备上登录一次后保持登录，之后再打开不用再填；只有主动退出或清浏览器数据，才需要重新填。数据存在云端，换设备登录同一个账号，错题和笔记本都在。</p>
 <p id="who" class="small"></p>
+<p id="slowNote" class="small hidden">网络有点慢，登录表单先出来了；如果点登录后还是转很久，就是连不上 Supabase 服务器，需要换个好点的网络再试。</p>
 <form id="f">
 <label>账号（用户名）</label><input id="username" required placeholder="例如：你的账号名">
 <label>密码</label><input id="password" type="password" required placeholder="不要在聊天里发密码，密码只在这里填">
@@ -35,7 +36,31 @@
 </main><footer>云端版 · 数据存在 Supabase，解析走 DeepSeek</footer>
 <script>
 (async () => {
-  await PWQ.ready();
+  // 6 秒还没回来就先出登录表单，不让用户卡在“正在加载账号…”；后台 ready 回来后如果已登录，再自动切到“我的”卡。
+  const readyP = PWQ.ready();
+  const isMy0 = new URLSearchParams(location.search).get("account") === "1";
+  readyP.then(() => {
+    const uu = PWQ.currentUser();
+    if (uu && isMy0) {
+      document.getElementById("loadingCard").classList.add("hidden");
+      document.getElementById("loginCard").classList.add("hidden");
+      const myCard2 = document.getElementById("myCard");
+      if (myCard2.classList.contains("hidden")) {
+        myCard2.classList.remove("hidden");
+        const av2 = document.getElementById("myAvatar");
+        if (uu.avatar_url) { av2.innerHTML = ""; const im2 = document.createElement("img"); im2.src = uu.avatar_url; im2.alt = ""; av2.appendChild(im2); }
+        else av2.textContent = (uu.username || "我").slice(0,1);
+        document.getElementById("myName").textContent = uu.username + (uu.role === "admin" ? "（管理员）" : "");
+        document.getElementById("myEmail").textContent = uu.email || "邮箱：未填";
+        if (PWQ.isAdmin()) document.getElementById("myAdminLink").classList.remove("hidden");
+      }
+    }
+  }).catch(() => {});
+  await Promise.race([readyP, new Promise(res => setTimeout(res, 6000))]);
+  if (!PWQ.currentUser()) {
+    const sn = document.getElementById("slowNote");
+    if (sn) sn.classList.remove("hidden");
+  }
   const u = PWQ.currentUser();
   const params = new URLSearchParams(location.search);
   const isMy = params.get("account") === "1";
