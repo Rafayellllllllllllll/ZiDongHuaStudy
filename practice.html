@@ -13,7 +13,7 @@
 <script src="config.js"></script><script src="app.js"></script></head><body>
 <main>
 <div class="card"><h1>练习</h1>
-<p>练习前自选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。</p>
+<p>练习前自选数目，都是五的倍数、最多 50 个。从未掌握的题里随机出题，已经会了的题练习里不再出现。点开始练习会跳到新页面，一页一题，点选项自动下一题。</p>
 <label>这次练几道？（五的倍数，最多 50）</label>
 <select id="count"><option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option><option>35</option><option>40</option><option>45</option><option>50</option></select>
 <p><button id="start">开始练习</button>
@@ -27,61 +27,13 @@ async function start(){
   await PWQ.ready();
   if (!PWQ.currentUser()) { document.getElementById("area").innerHTML = "<p>请先去登录页登录，登录后才能练习云端的题。</p>"; return; }
   const all = PWQ.getQuestions().filter(q => !q.mastered);
-  // 随机打乱：不按原来顺序。
-  pool = all.sort(() => Math.random() - 0.5)
+  // 随机打乱：不按原来顺序，取用户选的数目。
+  const pool = all.sort(() => Math.random() - 0.5)
     .slice(0, parseInt(document.getElementById("count").value, 10));
-  idx = 0;
   if (!pool.length) { document.getElementById("area").innerHTML = "<p>没有未掌握的题了，可以去错题库看看，或等已掌握复查。</p>"; return; }
-  show();
-}
-function show(){
-  const q = pool[idx];
-  const area = document.getElementById("area");
-  area.innerHTML = "<div class='qitem'><p>第 " + (idx+1) + " / " + pool.length + " 题 · " +
-    PWQ.escapeHtml(q.subject) + " · " + PWQ.escapeHtml(q.type) + "</p>" +
-    "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
-    q.options.map((o, oi) => "<button class='opt' data-ans='" + String.fromCharCode(65+oi) + "'>" + String.fromCharCode(65+oi) + ". " + PWQ.escapeHtml(o) + "</button>").join("") +
-    "<p class='small'>答的时候先不显示答案和解析。点一个选项，再点提交答案。</p>" +
-    "<button id='submit'>提交答案</button><div id='result'></div></div>";
-  let chosen = "";
-  area.querySelectorAll(".opt").forEach(b => {
-    b.onclick = () => {
-      chosen = b.dataset.ans;
-      area.querySelectorAll(".opt").forEach(x => x.classList.remove("selected"));
-      b.classList.add("selected");
-    };
-  });
-  document.getElementById("submit").onclick = async () => {
-    const ans = chosen;
-    if (!ans) { PWQ.toast("请先点一个选项。"); return; }
-    const ok = ans === q.answer;
-    const qs = PWQ.getQuestions();
-    const target = qs.find(x => x.id === q.id);
-    if (ok) { target.streak = (target.streak || 0) + 1;
-      if (target.streak >= 3) target.mastered = true;
-    } else { target.streak = 0; }
-    try { await PWQ.updateQuestion(target); } catch(e) { PWQ.toast(String(e.message || e)); }
-    area.querySelectorAll(".opt").forEach(b => {
-      if (b.dataset.ans === q.answer) { b.classList.add("correct"); b.innerHTML += "<span class='mark'>正确答案</span>"; }
-      else if (b.dataset.ans === ans) { b.classList.add("wrong"); b.innerHTML += "<span class='mark'>你选了 ×</span>"; }
-      b.disabled = true;
-    });
-    document.getElementById("result").innerHTML =
-      "<p>" + (ok ? "答对了。" : "答错了，计数清零，这道题重新回到练习里。") +
-      " 正确答案：" + PWQ.escapeHtml(q.answer) +
-      "；连续做对次数：" + target.streak +
-      (target.mastered ? "；已连续做对三次，标为已经会了。" : "") + "</p>" +
-      "<div class='explain'><b>红笔解析：</b>" + PWQ.escapeHtml(q.explain) + "</div>" +
-      "<button id='next'>下一题</button> " +
-      "<button class='secondary' id='similar'>按知识点生成一道同类题（占位）</button>";
-    document.getElementById("next").onclick = () => {
-      idx++;
-      if (idx < pool.length) show();
-      else document.getElementById("area").innerHTML = "<p>这次练习结束了。去错题库看看已经会了的题是怎么标的。</p>";
-    };
-    document.getElementById("similar").onclick = () =>
-      PWQ.toast("占位：同类题以后由 DeepSeek 按知识点生成，当前骨架不真实调用。");
-  };
+  // 跳转到新页面做题：一页一题，题号顺序存在浏览器里，新页面按这个顺序出题。
+  try { sessionStorage.setItem("pwq_practice_ids", JSON.stringify(pool.map(q => q.id))); } catch(e) {}
+  location.href = "practice-run.html";
 }
 document.getElementById("start").onclick = start;
 document.getElementById("review").onclick = () =>

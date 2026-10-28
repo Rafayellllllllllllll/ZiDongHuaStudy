@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fdf8f0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>拍照错题本 · 练习答题</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><script src="app.js"></script>
+<style>
+  /* 题目加选项框起来的底部一行：左下角返回上一题，右下角不确定 */
+  .run-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px}
+  .run-foot button{margin:0}
+  .run-foot .back-btn:disabled{opacity:.45}
+</style>
+</head><body>
+<main>
+<div class="card" id="runCard"><p>正在加载练习题…</p></div>
+</main>
+<footer>云端版 · 练习计数存在 Supabase</footer>
+<script>
+let pool = [], idx = 0, answers = [];
+async function init(){
+  await PWQ.ready();
+  const card = document.getElementById("runCard");
+  if (!PWQ.currentUser()) { card.innerHTML = "<p>请先去登录页登录，登录后才能练习云端的题。</p><p><a class='btn' href='practice.html'>回练习页</a></p>"; return; }
+  let ids = [];
+  try { ids = JSON.parse(sessionStorage.getItem("pwq_practice_ids") || "[]"); } catch(e) { ids = []; }
+  if (!ids.length) { card.innerHTML = "<p>没有这次练习的题，请先回练习页选数目、点开始练习。</p><p><a class='btn' href='practice.html'>回练习页</a></p>"; return; }
+  const all = PWQ.getQuestions();
+  // 按练习页打乱后的顺序出题，找不到的题直接跳过。
+  pool = ids.map(id => all.find(q => q.id === id)).filter(Boolean).map(q => {
+    q._origStreak = q.streak || 0;
+    q._origMastered = !!q.mastered;
+    return q;
+  });
+  if (!pool.length) { card.innerHTML = "<p>这次练习的题找不到了，请回练习页重新开始。</p><p><a class='btn' href='practice.html'>回练习页</a></p>"; return; }
+  answers = pool.map(() => null);
+  idx = 0;
+  show();
+}
+function show(){
+  const q = pool[idx];
+  const card = document.getElementById("runCard");
+  const prev = answers[idx];
+  const opts = (q.options || []).map((o, oi) => {
+    const letter = String.fromCharCode(65 + oi);
+    const sel = prev && prev.chosen === letter ? " selected" : "";
+    return "<button class='opt" + sel + "' data-ans='" + letter + "'>" + letter + ". " + PWQ.escapeHtml(o) + "</button>";
+  }).join("");
+  const unsureNote = prev && prev.unsure ? "<p class='small'>这道题你上次点了不确定，已算没掌握，重新点选项可以覆盖。</p>" : "";
+  const noOptNote = !opts ? "<p class='small'>这道题没有选项，点右下角不确定可以直接算没掌握并下一题。</p>" : "";
+  card.innerHTML = "<div class='qitem'><p>第 " + (idx+1) + " / " + pool.length + " 题 · " +
+    PWQ.escapeHtml(q.subject) + " · " + PWQ.escapeHtml(q.type) + "</p>" +
+    "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
+    opts + unsureNote + noOptNote +
+    "<div class='run-foot'><button type='button' class='secondary back-btn' id='backBtn'" + (idx === 0 ? " disabled" : "") + ">← 返回上一题</button>" +
+    "<button type='button' class='secondary' id='unsureBtn'>不确定</button></div></div>";
+  // 点选项：记下答案、算掌握，自动下一题，不用再点提交或下一题。
+  card.querySelectorAll(".opt").forEach(b => {
+    b.onclick = async () => { await answer(idx, b.dataset.ans, false); };
+  });
+  document.getElementById("backBtn").onclick = () => {
+    if (idx === 0) return;
+    idx--;
+    show();
+  };
+  // 不确定：不选选项，直接算没掌握（连续次数清零、不是已掌握），然后自动下一题。
+  document.getElementById("unsureBtn").onclick = async () => { await answer(idx, "", true); };
+}
+async function answer(i, chosen, unsure){
+  const q = pool[i];
+  let ok = false;
+  if (unsure) {
+    answers[i] = { chosen: "", unsure: true, ok: false };
+  } else {
+    ok = chosen === q.answer;
+    answers[i] = { chosen: chosen, unsure: false, ok: ok };
+  }
+  // 掌握按练习开始前的连续次数算，返回后重选会覆盖，不会重复累加。
+  const target = PWQ.getQuestions().find(x => x.id === q.id);
+  if (target) {
+    if (unsure || !ok) { target.streak = 0; target.mastered = false; }
+    else { target.streak = (q._origStreak || 0) + 1; target.mastered = target.streak >= 3; }
+    try { await PWQ.updateQuestion(target); } catch(e) { PWQ.toast(String(e.message || e)); }
+  }
+  advance();
+}
+function advance(){
+  idx++;
+  if (idx < pool.length) { show(); return; }
+  finish();
+}
+function finish(){
+  const card = document.getElementById("runCard");
+  const done = answers.filter(Boolean);
+  const correct = done.filter(a => a.ok).length;
+  const unsure = done.filter(a => a.unsure).length;
+  const wrong = done.length - correct - unsure;
+  const newly = pool.filter(q => {
+    const a = answers[pool.indexOf(q)];
+    return a && a.ok && (q._origStreak || 0) + 1 >= 3;
+  }).length;
+  card.innerHTML = "<div class='qitem'><h1>这次练习结束了</h1>" +
+    "<p>共 " + pool.length + " 题：答对 " + correct + " 道，答错 " + wrong + " 道，不确定 " + unsure + " 道。</p>" +
+    (newly ? "<p>其中 " + newly + " 道已连续做对三次，标为已经会了。</p>" : "<p>不确定和答错的题都算没掌握，还会再出现在练习里。</p>") +
+    "<p><a class='btn' href='practice.html'>回练习页</a></p></div>";
+  try { sessionStorage.removeItem("pwq_practice_ids"); } catch(e) {}
+}
+init();
+</script>
+<nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html">统计</a><a href="index.html?account=1">我的</a></nav>
+</body></html>
