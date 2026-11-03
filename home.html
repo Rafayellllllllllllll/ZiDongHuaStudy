@@ -14,22 +14,35 @@
 <script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js" defer></script><script src="app.js" defer></script>
 </head><body>
-<header class="home-head"><div class="home-head-inner"><div class="brand"><span class="brand-mark" aria-hidden="true">错</span><div><div class="logo">小错本</div><div class="brand-sub">错过的题，留在这里</div></div></div><div id="avatar" class="avatar" aria-hidden="true">我</div></div></header>
-<main>
-<a class="btn big-photo" href="upload.html"><span class="big-photo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg></span><span class="big-photo-tx">拍照录错题<small>框住一道题，读出来再改</small></span></a>
-<div class="grid2">
-<a href="practice.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></span><span>练习<small>从未掌握里随机出题</small></span></a>
-<a href="bank.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h11a3 3 0 0 1 3 3v12H8a3 3 0 0 1-3-3V5z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 9h6"/></svg></span><span>错题库<small>全部错题，按学科分</small></span></a>
-<a href="knowledge.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.2 4.6 5 .7-3.6 3.5.9 5.1L12 15.8 7.5 17.4l.9-5.1L4.8 8.8l5-.7L12 3.5z"/></svg></span><span>知识点<small>收藏的知识点，按学科分</small></span></a>
-<a href="notebook.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h9a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6"/></svg></span><span>笔记本<small>自己记下的知识点</small></span></a>
+<header class="home-head"><div class="home-head-inner"><div class="brand"><span class="brand-mark" aria-hidden="true">错</span><div><p class="greet" id="greet">你好</p><div class="logo">小错本</div></div></div><a id="avatar" class="avatar" href="index.html?account=1" aria-label="我的">我</a></div></header>
+<main class="dash">
+<div class="dash-grid">
+  <section class="hero-card area-hero" id="heroCard">
+    <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg>
+    <div class="hero-copy"><p class="kicker">掌握率</p><p class="hero-num" id="rateNum">0%</p><p class="small" id="heroSub">正在整理今天的进度…</p></div>
+  </section>
+  <div class="stat3 area-stats" id="stat3"></div>
+  <a class="btn big-photo area-cta" href="upload.html"><span class="big-photo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg></span><span class="big-photo-tx">拍照录错题<small>框住一道题，读出来再改</small></span></a>
+  <section class="area-review">
+    <div class="sec-head"><h2>今日复习</h2><button type="button" class="text-btn" id="startDue">全部开始</button></div>
+    <div id="dueList"></div>
+  </section>
+  <section class="area-recent">
+    <div class="sec-head"><h2>最近错题</h2><a href="bank.html">全部</a></div>
+    <div id="recentList"></div>
+  </section>
+  <section class="area-short">
+    <div class="sec-head"><h2>去看看</h2></div>
+    <div class="grid2">
+      <a href="practice.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></span><span>练习<small>自己选题量</small></span></a>
+      <a href="bank.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h11a3 3 0 0 1 3 3v12H8a3 3 0 0 1-3-3V5z"/><path d="M9 9h6"/></svg></span><span>错题库<small>按学科翻一遍</small></span></a>
+      <a href="knowledge.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.2 4.6 5 .7-3.6 3.5.9 5.1L12 15.8 7.5 17.4l.9-5.1L4.8 8.8l5-.7z"/></svg></span><span>知识点<small>收藏的概念</small></span></a>
+      <a href="notebook.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h9a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6"/></svg></span><span>笔记本<small>自己的笔记</small></span></a>
+    </div>
+  </section>
 </div>
-<a class="statsbar" href="bank.html" id="stats">今天：正在加载…</a>
 </main>
-<nav class="bottomnav">
-<a href="home.html" class="active">主页</a>
-<a href="stats.html">统计</a>
-<a href="index.html?account=1">我的</a>
-</nav>
+<nav class="tabbar" data-tab="home"></nav>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 (async () => {
@@ -39,12 +52,63 @@ document.addEventListener("DOMContentLoaded", function () {
   const av = document.getElementById("avatar");
   if (u.avatar_url) { av.innerHTML = ""; const im = document.createElement("img"); im.src = u.avatar_url; im.alt = ""; av.appendChild(im); }
   else av.textContent = (u.username || "我").slice(0, 1);
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Shanghai", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  const hello = hour < 11 ? "早上好" : hour < 18 ? "下午好" : "晚上好";
+  document.getElementById("greet").textContent = hello + "，" + (u.username || "同学");
+  function shiftDay(dateStr, n){
+    const d = new Date(dateStr + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function startIds(ids){
+    if (!ids.length) { PWQ.toast("还没有要复习的题，先去拍一道吧。"); return; }
+    try { sessionStorage.setItem("pwq_practice_ids", JSON.stringify(ids.slice(0, 10))); } catch(e) {}
+    location.href = "practice-run.html";
+  }
+  function row(q){
+    const tone = PWQ.subjectTone(q.subject || "其他");
+    const stem = PWQ.escapeHtml((q.stem || "（无题干）").replace(/\s+/g, " ").slice(0, 42));
+    return "<button type='button' class='due-row' data-id='" + PWQ.escapeHtml(q.id) + "'><i class='subj-dot tone-" + tone + "'></i><span><b>" + PWQ.escapeHtml(q.subject || "其他") + "</b>" + stem + "</span><em>练</em></button>";
+  }
   function paint(){
     const qs = PWQ.getQuestions();
     const today = PWQ.todayShanghai();
-    const todayCount = qs.filter(q => q.created_at && PWQ.dateInShanghai(q.created_at) === today).length;
-    const mastered = qs.filter(q => q.mastered).length;
-    document.getElementById("stats").textContent = "今天：已记录 " + todayCount + " 题 · 错题库共 " + qs.length + " 题 · 已掌握 " + mastered + " 题（点进错题库看统计）";
+    const weekStart = shiftDay(today, -6);
+    const mastered = qs.filter(q => q.mastered);
+    const due = qs.filter(q => !q.mastered);
+    const weekNew = qs.filter(q => q.created_at && PWQ.dateInShanghai(q.created_at) >= weekStart).length;
+    const rate = qs.length ? Math.round(mastered.length / qs.length * 100) : 0;
+    const C = 2 * Math.PI * 52;
+    const ring = document.getElementById("ringFg");
+    ring.style.strokeDasharray = String(C);
+    ring.style.strokeDashoffset = String(C);
+    requestAnimationFrame(() => { ring.style.strokeDashoffset = String(C * (1 - rate / 100)); });
+    document.getElementById("rateNum").textContent = rate + "%";
+    document.getElementById("heroSub").textContent = qs.length
+      ? ("已掌握 " + mastered.length + " / " + qs.length + " 题")
+      : "还没有错题，拍一道就开始了";
+    document.getElementById("stat3").innerHTML =
+      "<button type='button' class='stat-card' id='goDue'><b>" + due.length + "</b><span>待复习</span></button>" +
+      "<a class='stat-card' href='bank.html'><b>" + mastered.length + "</b><span>已掌握</span></a>" +
+      "<a class='stat-card' href='stats.html'><b>" + weekNew + "</b><span>本周新增</span></a>";
+    const dueEl = document.getElementById("dueList");
+    const recentEl = document.getElementById("recentList");
+    if (!qs.length) {
+      dueEl.innerHTML = "<div class='empty-panel'><strong>今天没有要复习的</strong><p>拍下第一道错题，它会出现在这里。</p></div>";
+      recentEl.innerHTML = "<div class='empty-panel'><strong>错题库还是空的</strong><p>最近记下的题会列在这里。</p></div>";
+    } else if (!due.length) {
+      dueEl.innerHTML = "<div class='empty-panel'><strong>待复习的题都清完了</strong><p>已掌握的题还在错题库里，可以过几天再查。</p></div>";
+      recentEl.innerHTML = qs.slice(0, 3).map(row).join("");
+    } else {
+      dueEl.innerHTML = due.slice(0, 4).map(row).join("");
+      recentEl.innerHTML = qs.slice(0, 3).map(row).join("");
+    }
+    const goDue = document.getElementById("goDue");
+    if (goDue) goDue.onclick = () => startIds(due.map(q => q.id));
+    document.getElementById("startDue").onclick = () => startIds(due.map(q => q.id));
+    document.querySelectorAll(".due-row").forEach(btn => {
+      btn.onclick = () => startIds([btn.dataset.id]);
+    });
   }
   paint();
   document.addEventListener("pwq-questions", paint);

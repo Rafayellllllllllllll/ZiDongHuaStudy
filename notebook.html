@@ -7,7 +7,8 @@
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>笔记</title>
+<title>小错本 · 笔记</title>
+<link rel="stylesheet" href="styles.css">
 <script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js" defer></script>
 <script src="app.js" defer></script>
@@ -28,7 +29,7 @@
   }
   .view[hidden]{display:none !important}
   /* 列表页：顶部标题和搜索框固定 */
-  .list-header{position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
+  .list-header{display:block;position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
   .list-title-row{display:flex;align-items:center;gap:8px;margin:0 0 12px}
   .list-header h1{font-size:24px;margin:0;display:flex;justify-content:space-between;align-items:baseline;flex:1;min-width:0}
   .top-back{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-weight:700;font-size:14px;text-decoration:none;flex:0 0 auto}
@@ -40,7 +41,7 @@
   .select-bar span{flex:1;font-size:14px;color:var(--muted)}
   .select-bar button{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:14px;font-weight:700;cursor:pointer}
   .select-bar button.danger{background:var(--accent);border-color:var(--accent);color:#fff}
-  .note-list{flex:1;overflow-y:auto;padding:12px 16px 110px}
+  .note-list{flex:1;overflow-y:auto;padding:12px 16px 150px}
   .note-card{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;cursor:pointer;transition:transform .15s ease,background-color .15s ease}
   .note-card:active{transform:scale(.98)}
   .note-card.selected{border-color:var(--accent)}
@@ -55,7 +56,7 @@
   .note-card.swiped .note-delete-swipe{display:block}
   .empty-state,.no-result{text-align:center;color:var(--muted);padding:40px 20px;line-height:1.6}
   .empty-state[hidden],.no-result[hidden]{display:none}
-  .fab{position:fixed;right:20px;bottom:88px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;border:0;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:20;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .fab{position:fixed;right:20px;bottom:calc(96px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;border:0;box-shadow:0 8px 18px rgba(217,45,32,.28);z-index:20;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .fab:active{transform:scale(.94)}
   /* 编辑页单行顶部栏：高约 52-56px（不含安全区），背景和页面一致，底部淡分割线 */
   .topbar-single{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:2px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:var(--bg);border-bottom:1px solid var(--line)}
@@ -777,5 +778,6 @@
   }
   document.addEventListener('DOMContentLoaded', function(){ bootNotes(); });
 </script>
+<nav class="tabbar" data-tab=""></nav>
 </body>
 </html>

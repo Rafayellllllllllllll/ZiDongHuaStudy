@@ -2,7 +2,7 @@
  * Supabase（别的域名，含登录）不拦截、不缓存。
  * 本站页面是「先走网络，失败再用缓存」。
  */
-var CACHE = "xiaocuoben-shell-v2";
+var CACHE = "xiaocuoben-shell-v3";
 var SHELL = [
   "./",
   "./index.html",

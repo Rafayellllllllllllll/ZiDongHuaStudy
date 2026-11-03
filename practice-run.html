@@ -88,8 +88,9 @@ function show(){
       const ok = PWQ.answerLetter(b.dataset.ans) === PWQ.answerLetter(q.answer);
       card.querySelectorAll(".opt").forEach(x => { if (x !== b) x.disabled = true; });
       showMark(b, ok);
-      answer(idx, b.dataset.ans, false);
-      setTimeout(() => { advancing = false; advance(); }, 560);
+      const graduated = answer(idx, b.dataset.ans, false);
+      if (graduated) showCelebrate();
+      setTimeout(() => { advancing = false; advance(); }, graduated ? 1200 : 560);
     };
   });
   document.getElementById("backBtn").onclick = () => {
@@ -106,8 +107,9 @@ function show(){
     advancing = true;
     knowBtn.classList.add("correct");
     knowBtn.textContent = "我会了 ✓";
-    answer(idx, "", false, "know");
-    setTimeout(() => { advancing = false; advance(); }, 480);
+    const graduated = answer(idx, "", false, "know");
+    if (graduated) showCelebrate();
+    setTimeout(() => { advancing = false; advance(); }, graduated ? 1200 : 480);
   };
   if (dontBtn) dontBtn.onclick = () => {
     if (advancing) return;
@@ -118,7 +120,7 @@ function show(){
     setTimeout(() => { advancing = false; advance(); }, 480);
   };
 }
-async function answer(i, chosen, unsure, selfGrade){
+function answer(i, chosen, unsure, selfGrade){
   const q = pool[i];
   let ok = false;
   if (selfGrade === "know") {
@@ -139,7 +141,24 @@ async function answer(i, chosen, unsure, selfGrade){
     if (!answers[i].ok || answers[i].unsure) { target.streak = 0; target.mastered = false; }
     else { target.streak = (q._origStreak || 0) + 1; target.mastered = target.streak >= 3; }
     PWQ.updateQuestion(target).catch(e => { PWQ.toast(String(e.message || e), "error"); });
+    return !!(target.mastered && !q._origMastered);
   }
+  return false;
+}
+function showCelebrate(){
+  let el = document.getElementById("celebrate");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "celebrate";
+    el.className = "celebrate";
+    el.innerHTML = "<div class='celebrate-card'><b>已经会了</b><p>连续做对三次，这道题先毕业。</p></div>";
+    document.body.appendChild(el);
+  }
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 1100);
 }
 function advance(){
   idx++;
@@ -184,5 +203,5 @@ function finish(){
   try { sessionStorage.removeItem("pwq_practice_ids"); } catch(e) {}
 }
 </script>
-<nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html">统计</a><a href="index.html?account=1">我的</a></nav>
+<nav class="tabbar" data-tab="practice"></nav>
 </body></html>
