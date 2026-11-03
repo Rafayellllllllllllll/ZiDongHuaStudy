@@ -6,20 +6,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>拍照错题本 · 错题库</title>
 <link rel="stylesheet" href="styles.css">
-<script src="supabase-js.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
-<script src="config.js"></script><script src="app.js"></script></head><body>
+<script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
+<script src="config.js" defer></script><script src="app.js" defer></script></head><body>
 <main class="bank-main">
-<div class="bank-top"><h1>错题库</h1><button type="button" class="bank-clean" id="dedupBtn" title="清理重复题">清理重复</button></div>
+<div class="bank-top"><a class="top-back" href="home.html" aria-label="返回主页">←</a><h1>错题库</h1><button type="button" class="bank-clean" id="dedupBtn" aria-label="清理重复题" title="清理重复题">清理重复</button></div>
 <p class="small bank-dedup-info" id="dedupInfo"></p>
 <div id="pills" class="pills-scroll"></div>
 <div id="list"><p class="small">正在加载错题…</p></div>
 <p class="bank-tools"><button class="bank-tool" onclick="window.print()">导出打印</button>
 <a class="btn bank-tool" href="practice.html">去练习</a></p>
-</main><footer>云端版 · 数据存在 Supabase</footer>
-<div class="zyb-backdrop" id="kpBackdrop"></div><section class="kp-sheet" id="kpSheet"><div class="zyb-grab"></div><button type="button" class="zyb-close" id="kpClose">×</button><div class="kp-sheet-body" id="kpBody"></div></section>
+</main>
+<div class="zyb-backdrop" id="kpBackdrop"></div><section class="kp-sheet" id="kpSheet"><div class="zyb-grab"></div><button type="button" class="zyb-close" id="kpClose" aria-label="关闭">×</button><div class="kp-sheet-body" id="kpBody"></div></section>
 <script>
 function dynamicSubjects(){ const s = ["全部"]; allQs.forEach(q => { const sub = q.subject || "其他"; if (!s.includes(sub)) s.push(sub); }); return s; }
 let allQs = [];
@@ -64,7 +64,7 @@ function renderList(){
   filtered.forEach(q => {
     const d = document.createElement("div");
     d.className = "qitem" + (q.mastered ? " mastered" : "");
-    const cstDate = q.created_at ? new Date(new Date(q.created_at).getTime() + 8*60*60*1000).toISOString().slice(0,10) : "";
+    const cstDate = q.created_at ? PWQ.dateInShanghai(q.created_at) : "";
     const ansLetters = String(q.answer || "").toUpperCase().replace(/[^A-D]/g, "").split("");
     const optsHtml = (q.options && q.options.length) ? q.options.map(o => {
       const letter = o.trim().charAt(0).toUpperCase();
@@ -83,16 +83,33 @@ function renderList(){
       "<p class='bank-actions'><button type='button' class='viewBtn'>查看解析</button> <button type='button' class='secondary editBtn'>改解析</button> <button type='button' class='ghost delBtn'>删除</button></p>";
     d.querySelector(".tag-subject").onclick = () => openSubjectPicker(q);
     d.querySelector(".viewBtn").onclick = () => openAnalysis(q);
-    d.querySelector(".editBtn").onclick = async () => {
-      const ne = prompt("改解析（改过的会标手动改过、不锁定，还能再改）：", q.explain);
-      if (ne !== null) { q.explain = ne; q.edited = true; try { await PWQ.updateQuestion(q); } catch(e) { PWQ.toast(String(e.message || e)); } renderList(); }
-    };
+    d.querySelector(".editBtn").onclick = () => openExplainEditor(q);
     d.querySelector(".delBtn").onclick = async () => {
       if (!confirm("确定删除这道题吗？云端也会删掉。")) return;
       await PWQ.deleteQuestion(q.id); renderList();
     };
     list.appendChild(d);
   });
+}
+function openExplainEditor(q){
+  const sheet = document.getElementById("kpSheet");
+  const body = document.getElementById("kpBody");
+  const backdrop = document.getElementById("kpBackdrop");
+  body.innerHTML = "<h2>改解析</h2><p class='small'>改过会标成手动改过，之后还能再改。</p><textarea id='explainEdit' rows='8' aria-label='解析'></textarea><p><button type='button' id='explainSave'>保存解析</button></p>";
+  const ta = body.querySelector("#explainEdit");
+  ta.value = q.explain || "";
+  body.querySelector("#explainSave").onclick = async () => {
+    q.explain = ta.value;
+    q.edited = true;
+    try { await PWQ.updateQuestion(q); PWQ.toast("解析已保存。"); }
+    catch(e) { PWQ.toast(String(e.message || e), "error"); return; }
+    closeSheet();
+    renderList();
+  };
+  sheet.classList.add("open");
+  backdrop.classList.add("show");
+  try { history.pushState({kpSheet: true}, ""); } catch(e) {}
+  ta.focus();
 }
 function closeSheet(){
   document.getElementById("kpSheet").classList.remove("open");
@@ -142,7 +159,7 @@ async function render(){
     const cached = PWQ.getCachedQuestions ? PWQ.getCachedQuestions() : [];
     if (cached.length) { allQs = sortNewToOld(cached); renderList(); }
   } catch(e) {}
-  try { await PWQ.ready(); } catch(e) { PWQ.toast("云端同步失败，显示的是本机缓存，可下拉刷新再试。"); return; }
+  try { await PWQ.ready({ questions: true, favorites: true }); } catch(e) { PWQ.toast("云端同步失败，显示的是本机缓存，可下拉刷新再试。", "error"); return; }
   if (!PWQ.currentUser()) { document.getElementById("list").innerHTML = "<p>请先去登录页登录，登录后这里才会显示你在云端的错题。</p>"; document.getElementById("pills").innerHTML = ""; return; }
   allQs = sortNewToOld(PWQ.getQuestions());
   renderList();
@@ -168,7 +185,7 @@ function openAnalysis(q){
       return "<div class='qitem'><p><b>" + PWQ.escapeHtml(o) + "</b> " + (isAns ? "<span class='mark'>正确答案</span>" : "<span class='mark'>错误选项</span>") + "</p>" +
         "<p>判断结果：" + (isAns ? "正确" : "错误") + "</p>" +
         "<p>选项解析：" + PWQ.escapeHtml(exp || q.explain || "") + "</p>" +
-        "<p>对应知识点：" + PWQ.escapeHtml(kp ? kp.name : o) + " <button type='button' class='kp-star " + (fav ? "on" : "") + "' data-kp='" + PWQ.escapeHtml(kpIdVal) + "' data-name='" + PWQ.escapeHtml(kp ? kp.name : o) + "'>★</button></p></div>";
+        "<p>对应知识点：" + PWQ.escapeHtml(kp ? kp.name : o) + " <button type='button' class='kp-star " + (fav ? "on" : "") + "' data-kp='" + PWQ.escapeHtml(kpIdVal) + "' data-name='" + PWQ.escapeHtml(kp ? kp.name : o) + "' aria-label='" + (fav ? "取消收藏" : "收藏这个知识点") + "'>★</button></p></div>";
     }).join("");
   } else {
     // 计算型：统一解析区，不机械地为每个选项建知识点讲解
@@ -181,7 +198,7 @@ function openAnalysis(q){
     if (kps.length) {
       const kp = kps[0];
       const fav = PWQ.isKnowledgeFavorited(kp.id);
-      html += "<p>知识点：" + PWQ.escapeHtml(kp.name) + " <button type='button' class='kp-star " + (fav ? "on" : "") + "' data-kp='" + PWQ.escapeHtml(kp.id) + "' data-name='" + PWQ.escapeHtml(kp.name) + "'>★</button></p>";
+      html += "<p>知识点：" + PWQ.escapeHtml(kp.name) + " <button type='button' class='kp-star " + (fav ? "on" : "") + "' data-kp='" + PWQ.escapeHtml(kp.id) + "' data-name='" + PWQ.escapeHtml(kp.name) + "' aria-label='" + (fav ? "取消收藏" : "收藏这个知识点") + "'>★</button></p>";
     }
     if (q.options && q.options.length) {
       html += q.options.map(o => "<div class='opt " + (o.trim().charAt(0) === q.answer ? "correct" : "") + "'><span>" + PWQ.escapeHtml(o) + "</span>" + (o.trim().charAt(0) === q.answer ? "<span class='mark'>正确答案</span>" : "") + "</div>").join("");
@@ -208,7 +225,7 @@ window.addEventListener("popstate", () => {
   if (sheet && sheet.classList.contains("open")) { sheet.classList.remove("open"); document.getElementById("kpBackdrop").classList.remove("show"); }
 });
 document.getElementById("dedupBtn").onclick = async () => {
-  await PWQ.ready();
+  await PWQ.ready({ questions: true });
   if (!PWQ.currentUser()) { PWQ.toast("请先登录。"); return; }
   const qs = sortNewToOld(PWQ.getQuestions());
   const seen = new Map();
@@ -225,8 +242,12 @@ document.getElementById("dedupBtn").onclick = async () => {
   document.getElementById("dedupInfo").textContent = "已删掉 " + dupIds.length + " 道重复题。";
   render();
 };
-render();
-</script>
+document.addEventListener("DOMContentLoaded", function () {
+  render();
+  document.addEventListener("pwq-questions", function () {
+    if (PWQ.currentUser()) { allQs = sortNewToOld(PWQ.getQuestions()); renderList(); }
+  });
+});
 </script>
 <nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html">统计</a><a href="index.html?account=1">我的</a></nav>
 </body></html>

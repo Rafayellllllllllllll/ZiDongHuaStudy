@@ -6,12 +6,13 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>拍照错题本 · 统计</title>
 <link rel="stylesheet" href="styles.css">
-<script src="supabase-js.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
-<script src="config.js"></script><script src="app.js"></script></head><body>
+<script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
+<script src="config.js" defer></script><script src="app.js" defer></script></head><body>
 <main class="stats-main">
+<a class="top-back" href="home.html" aria-label="返回主页">← 返回</a>
 <h1>统计</h1>
 <div id="loading" class="warn">正在加载统计数据…</div>
 <div id="error" class="warn hidden"></div>
@@ -47,17 +48,8 @@ let range = "7";
 let customStart = "", customEnd = "";
 let view = "subject";
 let selectedKey = "";
-function toCSTDate(iso){
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  const cst = new Date(d.getTime() + 8*60*60*1000);
-  return cst.toISOString().slice(0,10);
-}
-function todayCST(){
-  const now = new Date(Date.now() + 8*60*60*1000);
-  return now.toISOString().slice(0,10);
-}
+function toCSTDate(iso){ return iso ? PWQ.dateInShanghai(iso) : ""; }
+function todayCST(){ return PWQ.todayShanghai(); }
 function addDays(dateStr, n){
   const d = new Date(dateStr + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
@@ -171,7 +163,7 @@ async function load(){
   document.getElementById("error").classList.add("hidden");
   document.getElementById("content").classList.add("hidden");
   try {
-    await PWQ.ready();
+    await PWQ.ready({ questions: true });
     if (!PWQ.currentUser()) {
       document.getElementById("loading").classList.add("hidden");
       document.getElementById("error").textContent = "请先去登录页登录，登录后这里才会显示你在云端的错题统计。";
@@ -204,6 +196,6 @@ document.getElementById("applyCustom").onclick = () => {
   render();
 };
 document.getElementById("refreshBtn").onclick = () => { load(); };
-load();
+document.addEventListener("DOMContentLoaded", function () { load(); });
 </script>
 </body></html>

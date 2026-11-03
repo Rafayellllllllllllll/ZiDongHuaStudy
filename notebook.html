@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#fdf8f0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>笔记</title>
+<script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
+<script src="config.js" defer></script>
+<script src="app.js" defer></script>
 <style>
   :root{
     --bg:#fdf8f0; --surface:#ffffff; --toolbar-bg:#f7f0dd; --text:#16233a; --muted:#6b7280; --line:#e9e0cf; --accent:#d92d20; --accent-soft:#fdecea; --disabled:#c9bfae;
@@ -18,7 +25,10 @@
   .view[hidden]{display:none !important}
   /* 列表页：顶部标题和搜索框固定 */
   .list-header{position:sticky;top:0;z-index:10;background:var(--bg);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line)}
-  .list-header h1{font-size:24px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:baseline}
+  .list-title-row{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+  .list-header h1{font-size:24px;margin:0;display:flex;justify-content:space-between;align-items:baseline;flex:1;min-width:0}
+  .top-back{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-weight:700;font-size:14px;text-decoration:none;flex:0 0 auto}
+  .save-error{color:#d92d20;font-size:13px;margin:8px 0 0;line-height:1.5}
   .list-header h1 span{font-size:14px;color:var(--muted);font-weight:400}
   .search-input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text);font-size:15px;outline:0}
   .select-bar{display:flex;gap:8px;align-items:center;margin-top:12px}
@@ -108,7 +118,7 @@
 <!-- 列表页（首页） -->
 <div id="listView" class="view">
   <header class="list-header">
-    <h1>笔记 <span id="noteCount"></span></h1>
+    <div class="list-title-row"><a class="top-back" href="home.html" aria-label="返回主页">← 返回</a><h1>笔记 <span id="noteCount"></span></h1></div>
     <input id="searchInput" class="search-input" type="search" placeholder="搜索标题和正文" aria-label="搜索笔记">
     <div id="selectBar" class="select-bar" hidden>
       <span id="selectCount"></span>
@@ -484,14 +494,26 @@
       var reader = new FileReader();
       reader.onload = function(e){
         var img = new Image();
-        img.onload = function(){
+        img.onload = async function(){
           var maxW = 800, w = img.width, h = img.height;
           if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
           var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
           var url = canvas.toDataURL('image/jpeg', 0.85);
+          var path = '';
+          var src = '';
+          try {
+            if (!window.PWQ || !PWQ.uploadNoteImage) throw new Error('页面还没准备好，请稍后再插图片。');
+            path = await PWQ.uploadNoteImage(url);
+            src = await PWQ.signedUrlForNoteImage(path);
+          } catch (err) {
+            if (window.PWQ && PWQ.toast) PWQ.toast(String(err.message || err), 'error');
+            else alert(String(err.message || err));
+            return;
+          }
           bodyInput.focus(); restoreSelection();
-          var imgEl = document.createElement('img'); imgEl.src = url; imgEl.alt = '';
+          var imgEl = document.createElement('img'); imgEl.src = src; imgEl.alt = '';
+          if (path) imgEl.dataset.path = path;
           var sel = window.getSelection();
           if (sel.rangeCount && bodyInput.contains(sel.getRangeAt(0).commonAncestorContainer)) {
             var range = sel.getRangeAt(0); range.deleteContents(); range.insertNode(imgEl);
@@ -510,12 +532,28 @@
     });
   })();
 
-  // 笔记列表 + 编辑页跳转，全部存在本地 localStorage，刷新后还在。
-  var NOTES_KEY = 'notes_v1';
+  // 笔记按登录账号存在云端。本机旧笔记会在第一次打开时合并进去。保存失败会红字提示，不再悄悄丢掉。
+  var notesMem = [];
   var currentNoteId = null, origTitle = '', origBody = '', origBodyHtml = '', origNote = null, draftTimer = null;
   var selecting = false, selectedIds = new Set(), longPressTimer = null, longPressed = false;
-  function loadNotes(){ try { var v = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch(e) { return []; } }
-  function saveNotes(notes){ try { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); } catch(e) {} }
+  var lastSaveMsg = '';
+  function loadNotes(){ return notesMem; }
+  function reportSave(msg){
+    if (!msg || msg === lastSaveMsg) return;
+    lastSaveMsg = msg;
+    if (window.PWQ && PWQ.toast) PWQ.toast(msg, 'error');
+    else alert(msg);
+  }
+  function htmlForStorage(root){
+    var clone = root.cloneNode(true);
+    clone.querySelectorAll('img').forEach(function(img){
+      if (img.getAttribute('data-path')) img.setAttribute('src', 'storage://note-images/' + img.getAttribute('data-path'));
+    });
+    return clone.innerHTML;
+  }
+  function hasEditorContent(){
+    return !!(titleInput.value.trim() || getBodyPlainText().trim() || bodyInput.querySelector('img'));
+  }
   function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':"&quot;","'":"&#39;"}[c]; }); }
   function formatNoteTime(ts){
     var d = new Date(ts), now = new Date();
@@ -547,10 +585,11 @@
       var card = document.createElement('div');
       card.className = 'note-card' + (selectedIds.has(n.id) ? ' selected' : '');
       card.dataset.id = n.id;
-      var thumbSrc = (n.images && n.images.length) ? n.images[0] : null;
-      if (!thumbSrc && n.bodyHtml) { var m = String(n.bodyHtml).match(/<img[^>]+src=["']([^"']+)["']/); if (m) thumbSrc = m[1]; }
+      var thumbSrc = n.thumbUrl || '';
+      if (!thumbSrc && n.images && n.images.length && String(n.images[0]).indexOf('data:') === 0) thumbSrc = n.images[0];
+      if (!thumbSrc && n.bodyHtml) { var m = String(n.bodyHtml).match(/<img[^>]+src=["'](data:image\/[^"']+)["']/); if (m) thumbSrc = m[1]; }
       var thumb = thumbSrc ? "<img class='note-thumb' src='" + escapeHtml(thumbSrc) + "' alt=''>" : '';
-      card.innerHTML = "<div class='note-card-inner'><div class='note-card-text'><p class='note-title'>" + escapeHtml(showTitle) + "</p><p class='note-summary'>" + escapeHtml(n.body || '') + "</p><p class='note-time'>" + escapeHtml(formatNoteTime(n.updatedAt || n.createdAt || Date.now())) + "</p></div>" + thumb + "</div><button type='button' class='note-delete-swipe'>删除</button>";
+      card.innerHTML = "<div class='note-card-inner'><div class='note-card-text'><p class='note-title'>" + escapeHtml(showTitle) + "</p><p class='note-summary'>" + escapeHtml(n.body || '') + "</p><p class='note-time'>" + escapeHtml(formatNoteTime(n.updatedAt || n.createdAt || Date.now())) + "</p></div>" + thumb + "</div><button type='button' class='note-delete-swipe' aria-label='删除这条笔记'>删除</button>";
       // 点击整张卡：选择模式下切换选中，否则打开编辑页。
       card.addEventListener('click', function(e){
         if (e.target.closest('.note-delete-swipe')) return;
@@ -577,12 +616,14 @@
           card.classList.add('swiped');
         }
       });
-      card.querySelector('.note-delete-swipe').addEventListener('click', function(e){
+      card.querySelector('.note-delete-swipe').addEventListener('click', async function(e){
         e.stopPropagation();
-        if (confirm('确定删除 1 条笔记吗？')) {
-          saveNotes(loadNotes().filter(function(x){ return x.id !== n.id; }));
+        if (!confirm('确定删除 1 条笔记吗？')) return;
+        try {
+          await PWQ.deleteNote(n.id);
+          notesMem = PWQ.getNotes();
           renderList();
-        }
+        } catch (err) { reportSave('删除失败：' + String(err.message || err)); }
       });
       listEl.appendChild(card);
     });
@@ -606,10 +647,15 @@
     if (!selecting) renderList();
   }
   document.getElementById('cancelSelectBtn').addEventListener('click', function(){ selecting = false; selectedIds.clear(); renderList(); });
-  document.getElementById('deleteSelectedBtn').addEventListener('click', function(){
+  document.getElementById('deleteSelectedBtn').addEventListener('click', async function(){
     if (!selectedIds.size) return;
     if (confirm('确定删除 ' + selectedIds.size + ' 条笔记吗？')) {
-      saveNotes(loadNotes().filter(function(x){ return !selectedIds.has(x.id); }));
+      var ids = Array.from(selectedIds);
+      for (var di = 0; di < ids.length; di++) {
+        try { await PWQ.deleteNote(ids[di]); }
+        catch (err) { reportSave('删除失败：' + String(err.message || err)); }
+      }
+      notesMem = PWQ.getNotes();
       selecting = false; selectedIds.clear(); renderList();
     }
   });
@@ -619,7 +665,7 @@
   function plainToHtml(text){
     return String(text || '').split('\n').map(function(l){ return escapeHtml(l); }).join('<br>');
   }
-  function openEditor(id){
+  async function openEditor(id){
     var notes = loadNotes();
     var note = id ? notes.find(function(n){ return n.id === id; }) : null;
     currentNoteId = note ? note.id : null;
@@ -630,7 +676,11 @@
     origBody = bodyPlain;
     origBodyHtml = bodyHtml;
     titleInput.value = origTitle;
-    bodyInput.innerHTML = bodyHtml;
+    var shownHtml = bodyHtml;
+    if (window.PWQ && PWQ.prepareNoteHtml) {
+      try { shownHtml = await PWQ.prepareNoteHtml(bodyHtml); } catch (e) {}
+    }
+    bodyInput.innerHTML = shownHtml;
     savedRange = null;
     editorDirty = false;
     var u = document.getElementById('undoBtn'), r = document.getElementById('redoBtn');
@@ -645,56 +695,83 @@
     showView('editor');
     try { titleInput.focus({preventScroll: true}); } catch(e) { try { titleInput.focus(); } catch(e2) {} }
   }
-  function upsertCurrentNote(){
-    var title = titleInput.value, body = getBodyPlainText(), bodyHtml = bodyInput.innerHTML, images = getBodyImages();
-    if (!title.trim() && !body.trim() && !images.length) return false;
-    var notes = loadNotes();
-    var now = Date.now();
-    if (currentNoteId) {
-      var ex = notes.find(function(n){ return n.id === currentNoteId; });
-      if (ex) { ex.title = title; ex.body = body; ex.bodyHtml = bodyHtml; ex.images = images; ex.updatedAt = now; }
-      else notes.unshift({ id: currentNoteId, title: title, body: body, bodyHtml: bodyHtml, createdAt: now, updatedAt: now, images: images });
-    } else {
-      currentNoteId = 'n' + now + Math.random().toString(36).slice(2, 7);
-      notes.unshift({ id: currentNoteId, title: title, body: body, bodyHtml: bodyHtml, createdAt: now, updatedAt: now, images: images });
+  async function upsertCurrentNote(){
+    var title = titleInput.value, body = getBodyPlainText(), bodyHtml = htmlForStorage(bodyInput);
+    if (!hasEditorContent()) return { empty: true };
+    try {
+      var res = await PWQ.saveFullNote({
+        id: currentNoteId,
+        title: title,
+        body: body,
+        bodyHtml: bodyHtml,
+        createdAt: origNote ? origNote.createdAt : Date.now(),
+        updatedAt: Date.now()
+      });
+      if (res.warning) reportSave(res.warning);
+      else lastSaveMsg = '';
+      currentNoteId = res.note.id;
+      notesMem = PWQ.getNotes();
+      return { ok: true, note: res.note };
+    } catch (err) {
+      reportSave('保存失败：' + String(err.message || err));
+      return { ok: false };
     }
-    saveNotes(notes);
-    return true;
   }
   // 草稿自动保存：对应当前这条笔记，同一个 ID 更新，不在列表里产生重复项。
   function scheduleDraft(){
     clearTimeout(draftTimer);
     draftTimer = setTimeout(function(){
-      if (!titleInput.value.trim() && !getBodyPlainText().trim() && !getBodyImages().length) return;
+      if (!hasEditorContent()) return;
       upsertCurrentNote();
     }, 3000);
   }
   titleInput.addEventListener('input', scheduleDraft);
   bodyInput.addEventListener('input', scheduleDraft);
-  document.getElementById('completeBtn').addEventListener('click', function(){
-    if (!titleInput.value.trim() && !getBodyPlainText().trim() && !getBodyImages().length) { showView('list'); return; }
-    upsertCurrentNote();
-    showView('list');
+  document.getElementById('completeBtn').addEventListener('click', async function(){
+    if (!hasEditorContent()) { showView('list'); return; }
+    var res = await upsertCurrentNote();
+    if (res && res.ok) showView('list');
   });
-  document.getElementById('backBtn').addEventListener('click', function(){
-    var changed = editorDirty || titleInput.value !== origTitle || getBodyPlainText() !== origBody || bodyInput.innerHTML !== origBodyHtml;
+  document.getElementById('backBtn').addEventListener('click', async function(){
+    var changed = editorDirty || titleInput.value !== origTitle || getBodyPlainText() !== origBody;
     if (!changed) { showView('list'); return; }
     if (confirm('内容有修改，是否保存？')) {
-      if (titleInput.value.trim() || getBodyPlainText().trim() || getBodyImages().length) upsertCurrentNote();
-    } else {
-      // 不保存：恢复打开时的原样（包括颜色和样式），新笔记则删掉草稿自动保存产生的那一条。
-      var notes = loadNotes();
-      if (origNote) {
-        var ex = notes.find(function(n){ return n.id === origNote.id; });
-        if (ex) { ex.title = origNote.title; ex.body = origNote.body; ex.bodyHtml = origNote.bodyHtml; ex.images = origNote.images; ex.updatedAt = origNote.updatedAt; }
-        saveNotes(notes);
-      } else if (currentNoteId) {
-        saveNotes(notes.filter(function(n){ return n.id !== currentNoteId; }));
+      if (hasEditorContent()) {
+        var res = await upsertCurrentNote();
+        if (!res || !res.ok) return;
       }
+    } else if (origNote && origNote.id) {
+      try {
+        await PWQ.saveFullNote(origNote);
+        notesMem = PWQ.getNotes();
+      } catch (err) { reportSave('没能恢复原来的笔记：' + String(err.message || err)); }
+    } else if (currentNoteId) {
+      try {
+        await PWQ.deleteNote(currentNoteId);
+        notesMem = PWQ.getNotes();
+      } catch (err) { reportSave('没能丢掉未保存的草稿：' + String(err.message || err)); }
     }
     showView('list');
   });
-  renderList();
+  async function bootNotes(){
+    if (!window.PWQ) { renderList(); return; }
+    try { await PWQ.ready({ notes: true }); }
+    catch (err) { reportSave('笔记加载失败：' + String(err.message || err)); }
+    notesMem = PWQ.getNotes();
+    if (!PWQ.currentUser()) {
+      var hint = document.createElement('p');
+      hint.className = 'save-error';
+      hint.textContent = '还没登录，笔记只在这台手机上。登录后会按账号同步到云端。';
+      document.querySelector('.list-header').appendChild(hint);
+    }
+    renderList();
+    document.addEventListener('pwq-notes', function(){
+      if (!document.getElementById('editorView').hidden) return;
+      notesMem = PWQ.getNotes();
+      renderList();
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){ bootNotes(); });
 </script>
 </body>
 </html>
