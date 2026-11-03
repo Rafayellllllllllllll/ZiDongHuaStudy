@@ -1,17 +1,24 @@
-// 错题本 · DeepSeek 视觉识别 Edge Function（vision）
-// 用能看图的 DeepSeek 模型（deepseek-flash，实测能看图）读照片里的题目。
-// 前端调用：POST 到 /functions/v1/vision，body 为 {image: "data:image/jpeg;base64,..."}
-// 返回：{stem, options, qkind}，options 是数组，如 ["A. ...", "B. ..."]；读不出来时返回空 stem 并附 note。
-// 注意：照片只临时发给 DeepSeek 看一次，不存 Supabase、不存 GitHub；正式上线前应加上 JWT 校验或限流。
+// 错题本 · 拍照识别（vision）
+// 模型用 deepseek-flash。这个模型默认会先「想一轮」再回答，读题不需要想，
+// 所以这里关掉思考，只让它抄题。照片在手机上先压过再传来。
+//
+// 改完这个文件后要重新部署，否则线上还是旧函数：
+//   supabase functions deploy vision --project-ref mjsmrltdwcnzmstbjzry
+//
+// 前端 POST /functions/v1/vision，body：{image: "data:image/jpeg;base64,..."}
+// 返回：{stem, options, suggested_answer, subject, qkind, explain_type, usage}
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SUBJECTS = ["语文", "数学", "英语", "政治", "物理", "化学", "生物", "历史", "地理", "计算机", "其他"];
+
 function cleanLatex(s) {
-  if (!s) return s;
-  let out = s;
+  if (!s) return "";
+  let out = String(s);
   const map = {
     "\\cap": "∩", "\\cup": "∪", "\\varnothing": "∅", "\\emptyset": "∅",
     "\\in": "∈", "\\notin": "∉", "\\subset": "⊂", "\\subseteq": "⊆",
@@ -26,33 +33,115 @@ function cleanLatex(s) {
   out = out.replace(/\\/g, "");
   return out.trim();
 }
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+
+function jsonHeaders() {
+  return { ...corsHeaders, "Content-Type": "application/json" };
+}
+
+function normalizeOptions(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  list.forEach((item) => {
+    const raw = cleanLatex(item).trim();
+    if (!raw) return;
+    const m = raw.match(/^([A-D])[\.、．:：]\s*/i);
+    const letter = m ? m[1].toUpperCase() : String.fromCharCode(65 + out.length);
+    const body = raw.replace(/^[A-D][\.、．:：]\s*/i, "").trim();
+    if (body) out.push(letter + ". " + body);
+    else if (m) out.push(letter + ". " + raw);
+  });
+  return out;
+}
+
+function pickSubject(value, stem) {
+  const text = String(value || "").trim();
+  if (SUBJECTS.includes(text)) return text;
+  const latin = (stem.match(/[A-Za-z]/g) || []).length;
+  const chinese = (stem.match(/[\u4e00-\u9fa5]/g) || []).length;
+  if (latin >= 10 && latin > chinese) return "英语";
+  if (/集合|函数|几何|代数|方程|不等式|概率|三角|数列|导数/.test(stem)) return "数学";
+  if (/古诗|阅读|作文|文言|词语|汉字/.test(stem)) return "语文";
+  if (/法律|时政|宪法|政治|民主/.test(stem)) return "政治";
+  if (/力学|电学|光学|电流|电压|电阻/.test(stem)) return "物理";
+  if (/编程|算法|AI|人工智能|硬件|CPU|内存/.test(stem)) return "计算机";
+  return "其他";
+}
+
+function parseLoose(text) {
+  const stemMatch = text.match(/题干[：:]\s*([\s\S]*?)(?:\n选项[：:]|\nA[\.、．])/);
+  const stem = cleanLatex(stemMatch ? stemMatch[1].trim() : "");
+  const options = [];
+  const optRe = /^([A-D])[\.、．]\s*(.+)$/gm;
+  let m;
+  while ((m = optRe.exec(text)) !== null) options.push(m[1] + ". " + cleanLatex(m[2].trim()));
+  const ansMatch = text.match(/正确答案[：:]\s*([^\n]+)/);
+  const qkindMatch = text.match(/大题型[：:]\s*(选择题|判断题|主观题)/);
+  const typeMatch = text.match(/解析类型[：:]\s*(定量计算类|定性辨析类)/);
+  const subjMatch = text.match(/学科[：:]\s*([\u4e00-\u9fa5]{1,6})/);
+  return {
+    stem,
+    options,
+    suggested_answer: ansMatch ? ansMatch[1].trim() : "",
+    subject: pickSubject(subjMatch ? subjMatch[1] : "", stem),
+    qkind: qkindMatch ? qkindMatch[1] : (options.length ? "选择题" : "主观题"),
+    explain_type: typeMatch ? typeMatch[1] : "定性辨析类",
+  };
+}
+
+function parseAnswer(answer, options) {
+  const text = String(answer || "").trim();
+  if (!text) return "";
+  if (options.length) {
+    const letter = text.match(/^([A-D])/i);
+    if (letter) return letter[1].toUpperCase();
   }
+  return cleanLatex(text);
+}
+
+function parseModel(text) {
+  const trimmed = String(text || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  let obj = null;
+  try {
+    obj = JSON.parse(trimmed);
+  } catch (_e) {
+    const block = trimmed.match(/\{[\s\S]*\}/);
+    if (block) {
+      try { obj = JSON.parse(block[0]); } catch (_e2) { obj = null; }
+    }
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return parseLoose(trimmed);
+  const stem = cleanLatex(obj.stem || obj["题干"] || "");
+  const options = normalizeOptions(obj.options || obj["选项"] || []);
+  const qkindRaw = String(obj.qkind || obj["大题型"] || "");
+  const typeRaw = String(obj.explain_type || obj["解析类型"] || "");
+  return {
+    stem,
+    options,
+    suggested_answer: parseAnswer(obj.answer || obj.suggested_answer || obj["正确答案"] || "", options),
+    subject: pickSubject(obj.subject || obj["学科"] || "", stem),
+    qkind: ["选择题", "判断题", "主观题"].includes(qkindRaw) ? qkindRaw : (options.length ? "选择题" : "主观题"),
+    explain_type: typeRaw === "定量计算类" ? "定量计算类" : "定性辨析类",
+  };
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const { image } = await req.json();
     const apiKey = Deno.env.get("DEEPSEEK_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "DEEPSEEK_API_KEY 未设置" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "DEEPSEEK_API_KEY 未设置" }), { status: 500, headers: jsonHeaders() });
     }
     if (!image) {
-      return new Response(JSON.stringify({ error: "没有传照片" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "没有传照片" }), { status: 400, headers: jsonHeaders() });
     }
-    const prompt = `你是拍照错题本的题目识别助手。看这张照片里框住的那一道题，只输出这一道题，不要输出其他题。
-请按下面格式输出，不要加多余解释：
-题干：……
-选项：
-A. ……
-B. ……
-C. ……
-D. ……
-正确答案：X（只写一个字母，A/B/C/D；如果这道题没有选项（判断题或主观题），就写判断题的对/错，或主观题的参考答案简述，不要猜选项）
-学科：X（只写一个词，从下面选一个最贴切的：语文、数学、英语、政治、物理、化学、生物、历史、地理、计算机、其他；集合、函数、几何、代数是数学，古诗、阅读、作文是语文，英文单词、英语句子、英语语法是英语，法律、时政是政治，力学、电学是物理，编程、AI、硬件是计算机）
-大题型：X（只写一个词：选择题、判断题、主观题；有 A/B/C/D 选项就是选择题，只有对/错就是判断题，没有选项要写过程的就是主观题）
-解析类型：X（只写一个词：定量计算类、定性辨析类；要算数、算步骤的就是定量计算类，要辨析概念、对错原因的就是定性辨析类）
-只用普通文字和普通符号，不要用 LaTeX：不要出现 \( \) $ \{ \} \cap \cup \varnothing \in \subset 等反斜杠写法，交集直接写 ∩，并集直接写 ∪，空集直接写 ∅，属于直接写 ∈，大括号直接写 { }，分数写成 a/b 这种普通形式。
-如果照片看不清、读不出来，就只输出“读不出来”四个字，不要猜。`;
+    // 短提示：只抄这一道，输出 JSON。不要求模型先推理。
+    const prompt = `看照片里框住的这一道题，按原文抄下来，不要解题，不要改写。只输出一个 JSON，不要别的字：
+{"stem":"题干原文","options":["A. ...","B. ..."],"answer":"A","subject":"数学","qkind":"选择题","explain_type":"定性辨析类"}
+没有选项就让 options 为 []。选择题的 answer 只写字母；判断题写对或错；主观题写一句参考答案。
+subject 只能是：语文、数学、英语、政治、物理、化学、生物、历史、地理、计算机、其他。
+qkind 只能是：选择题、判断题、主观题。explain_type 只能是：定量计算类、定性辨析类。
+用普通文字，不要 LaTeX。看不清就把 stem 设成空字符串，不要猜。`;
     const res = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -62,52 +151,30 @@ D. ……
           { type: "text", text: prompt },
           { type: "image_url", image_url: { url: image } },
         ] }],
-        temperature: 0.2,
-        max_tokens: 1000,
+        // 默认是思考模式、力度 high。读题是抄写，先想一轮会每张图都多等一整段推理。
+        thinking: { type: "disabled" },
+        temperature: 0,
+        max_tokens: 2000,
       }),
     });
     if (!res.ok) {
       const t = await res.text();
-      return new Response(JSON.stringify({ error: "DeepSeek 视觉调用失败", detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "DeepSeek 视觉调用失败", detail: t.slice(0, 500) }), { status: 502, headers: jsonHeaders() });
     }
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content || "";
-    if (text.includes("读不出来")) {
-      const usage0 = data?.usage || {};
-      return new Response(JSON.stringify({ stem: "", options: [], note: "读不出来", usage: { prompt_tokens: usage0.prompt_tokens || 0, completion_tokens: usage0.completion_tokens || 0, total_tokens: usage0.total_tokens || 0 } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-    // 解析题干和选项
-    const stemMatch = text.match(/题干[：:]\s*([\s\S]*?)(?:\n选项[：:]|\nA[\.、．])/);
-    const stem = cleanLatex(stemMatch ? stemMatch[1].trim() : text.split("\n")[0].trim());
-    const options = [];
-    const optRe = /^([A-D])[\.、．]\s*(.+)$/gm;
-    let m;
-    while ((m = optRe.exec(text)) !== null) {
-      options.push(m[1] + ". " + cleanLatex(m[2].trim()));
-    }
-    const ansMatch = text.match(/正确答案[：:]\s*([A-D])/);
-    const suggested_answer = ansMatch ? ansMatch[1] : "";
-    const qkindMatch = text.match(/大题型[：:]\s*(选择题|判断题|主观题)/);
-    const qkind = qkindMatch ? qkindMatch[1] : (options.length ? "选择题" : "主观题");
-    const typeMatch = text.match(/解析类型[：:]\s*(定量计算类|定性辨析类)/);
-    const explain_type = typeMatch ? typeMatch[1] : "定性辨析类";
-    const subjMatch = text.match(/学科[：:]\s*([\u4e00-\u9fa5]{1,6})/);
-    let subject = subjMatch ? subjMatch[1] : "其他";
-    // 兜底：如果模型没给学科，按题干再判一次，不能一开始就不生成、直接丢给用户手动改。
-    // 尤其是英语题：以前允许列表里没有英语，英语题只能默认成“其他”，现在先按英文占比判英语。
-    if (!subjMatch) {
-      const latin = (stem.match(/[A-Za-z]/g) || []).length;
-      const chinese = (stem.match(/[\u4e00-\u9fa5]/g) || []).length;
-      if (latin >= 10 && latin > chinese) subject = "英语";
-      else if (/集合|函数|几何|代数|方程|不等式|概率|三角|数列|导数/.test(stem)) subject = "数学";
-      else if (/古诗|阅读|作文|文言|词语|汉字/.test(stem)) subject = "语文";
-      else if (/法律|时政|宪法|政治|民主/.test(stem)) subject = "政治";
-      else if (/力学|电学|光学|力学|电流|电压|电阻/.test(stem)) subject = "物理";
-      else if (/编程|算法|AI|人工智能|硬件|CPU|内存/.test(stem)) subject = "计算机";
-    }
     const usage = data?.usage || {};
-    return new Response(JSON.stringify({ stem, options, suggested_answer, subject, qkind, explain_type, raw: text, usage: { prompt_tokens: usage.prompt_tokens || 0, completion_tokens: usage.completion_tokens || 0, total_tokens: usage.total_tokens || 0 } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const usageOut = {
+      prompt_tokens: usage.prompt_tokens || 0,
+      completion_tokens: usage.completion_tokens || 0,
+      total_tokens: usage.total_tokens || 0,
+    };
+    if (!text.trim() || text.trim() === "读不出来") {
+      return new Response(JSON.stringify({ stem: "", options: [], note: "读不出来", usage: usageOut }), { headers: jsonHeaders() });
+    }
+    const parsed = parseModel(text);
+    return new Response(JSON.stringify({ ...parsed, usage: usageOut }), { headers: jsonHeaders() });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: jsonHeaders() });
   }
 });

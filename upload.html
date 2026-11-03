@@ -6,11 +6,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>拍照错题本 · 录错题</title>
 <link rel="stylesheet" href="styles.css">
-<script src="supabase-js.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
-<script src="config.js"></script><script src="app.js"></script>
+<script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
+<script src="config.js" defer></script><script src="app.js" defer></script>
 </head><body>
 <div class="camscreen" id="camScreen">
 <div class="cam-top"><a href="home.html" aria-label="返回主页">←</a><span class="cam-tip" id="camTip">正在打开相机…请允许使用相机权限</span></div>
@@ -29,15 +29,14 @@
 <p style="margin:0;padding:8px 16px 0"><button type="button" class="secondary" id="addBox" style="margin-top:0">手动补框：在照片上拖一下，框出没框住的题</button>
 <button type="button" class="secondary" id="retakeBtn2" style="margin-top:0">重新拍摄</button>
 <button type="button" id="recognize" style="margin-top:0">识别所选题目</button></p>
-<p class="zyb-hint" id="ocrNote">点框是选 / 取消选；按住框身拖动可以移动框；按住框右下角圆点可以调宽和高。框不准先别急着保存，先调好框。</p>
-<p class="zyb-hint">这是真实识别：点“识别”会把每个选中框裁出来发给能看图的 DeepSeek 模型读题干、选项和正确答案，照片只临时发给模型看一次，不存云端。下面解析面板里的题目、答案、步骤如果还没识别出来，会先显示“正在识别…”，不会用假题目冒充真实识别。</p>
+<p class="zyb-hint" id="ocrNote">点框选中，拖框移动，拖右下角改大小。框准了再识别。</p>
 <div style="height:16px"></div>
 </main>
 <div class="zyb-bar" id="zybBar"><span class="zyb-count" id="zybCount">已选 0 道</span><button type="button" id="zybRecordBtn">记录错题</button></div>
 <div class="zyb-backdrop" id="zybBackdrop"></div>
 <section class="zyb-sheet" id="zybSheet" aria-label="题目解析面板">
 <div class="zyb-grab" id="zybGrab"></div>
-<button type="button" class="zyb-close" id="zybClose" title="收起解析面板">×</button>
+<button type="button" class="zyb-close" id="zybClose" aria-label="收起解析面板" title="收起解析面板">×</button>
 <div class="zyb-tabs" id="zybTabs"></div>
 <div class="zyb-body" id="zybBody"><p class="small">还没识别出题目。先在照片上点框选好题目，再点底部“记录错题”或“识别所选题目”。</p></div>
 </section>
@@ -94,7 +93,7 @@ function renderBoxes(){
     d.style.left = b.x + "%"; d.style.top = b.y + "%";
     d.style.width = b.w + "%"; d.style.height = b.h + "%";
     const numLabel = b.selected ? String(b.selOrder || (i+1)) : String(i+1);
-    d.innerHTML = "<span class=\"zyb-num\">" + numLabel + "</span><div class=\"zyb-del\" title=\"删掉这个框\">×</div><div class=\"zyb-handle\" title=\"拖这个圆点调宽和高\">↩</div>";
+    d.innerHTML = "<span class=\"zyb-num\">" + numLabel + "</span><div class=\"zyb-del\" role=\"button\" aria-label=\"删除这个框\" title=\"删掉这个框\">×</div><div class=\"zyb-handle\" role=\"button\" aria-label=\"调整框的大小\" title=\"拖这个圆点调宽和高\">↩</div>";
     let mode = null, startX = 0, startY = 0, orig = null;
     const posOf = (e) => {
       const r = stage.getBoundingClientRect();
@@ -300,6 +299,23 @@ function closeSheet(){
   sheet.classList.remove("open"); sheet.classList.remove("peek");
   backdrop.classList.remove("show");
 }
+function optionPlain(o){ return String(o || "").replace(/^[A-D][\.、．:：]\s*/i, "").trim(); }
+function flushSheetFields(){
+  const body = document.getElementById("zybBody");
+  const c = sheetCards[sheetIndex];
+  if (!c || !body || c.pending) return;
+  const stemEl = body.querySelector(".stem-edit");
+  if (stemEl) c.stem = stemEl.value;
+  const optEls = body.querySelectorAll(".opt-edit");
+  if (optEls.length) {
+    c.options = Array.from(optEls).map((el, i) => {
+      const plain = el.value.replace(/^[A-D][\.、．:：]\s*/i, "").trim();
+      return plain ? (String.fromCharCode(65 + i) + ". " + plain) : "";
+    });
+  }
+  const ansEl = body.querySelector(".answer-edit");
+  if (ansEl && !(c.options || []).some(optionPlain)) c.answer = ansEl.value.trim();
+}
 function renderSheet(){
   const tabs = document.getElementById("zybTabs");
   const body = document.getElementById("zybBody");
@@ -308,53 +324,77 @@ function renderSheet(){
     body.innerHTML = "<p class=\"small\">还没识别出题目。先在照片上点框选好题目，再点底部“记录错题”或“识别所选题目”。</p>";
     return;
   }
-  sheetCards.forEach((c, ci) => {
+  sheetCards.forEach((card, ci) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "zyb-tab" + (ci === sheetIndex ? " active" : "");
     btn.textContent = String(ci+1);
-    btn.onclick = () => { sheetIndex = ci; renderSheet(); };
+    btn.onclick = () => { flushSheetFields(); sheetIndex = ci; renderSheet(); };
     tabs.appendChild(btn);
   });
   const c = sheetCards[sheetIndex];
-  const optsHtml = (c.options && c.options.length) ? c.options.map(o => {
-    const letter = o.trim().charAt(0);
-    const isAns = letter === c.answer;
-    return "<div class='opt " + (isAns ? "correct" : "") + "' data-letter='" + letter + "'><span>" + PWQ.escapeHtml(o) + "</span>" + (isAns ? "<span class='mark'>正确答案</span>" : "") + "</div>";
-  }).join("") : "<p class=\"small\">这道题没有选项（判断题或主观题），下面直接看答案和步骤。</p>";
-  body.innerHTML = "<p><b>第 " + (sheetIndex+1) + " 题</b> <span class='tag subjectTag'>" + PWQ.escapeHtml(c.subject) + "</span><input class='subjectInput hidden' value='" + PWQ.escapeHtml(c.subject) + "' style='width:80px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px'></p>" +
-    "<p><b>" + PWQ.escapeHtml(c.stem || "正在识别…") + "</b></p>" +
-    optsHtml +
-    "<p class='small' style='text-align:right'>点一下选项可以改正确答案</p>" +
-    "<div class='explain'><b>红笔解析：</b><span>" + PWQ.escapeHtml(c.explain || "还没生成解析，点下面“生成解析并保存”后这里会显示步骤和知识点。") + "</span></div>" +
-    "<p><button type='button' id='sheetSaveOne'>生成解析并保存这道题</button></p>" +
-    "<p class='small'>学科在第几题旁边的小药丸上，点一下可以改，支持自定义；大题型、解析类型直接记在后台，不在页面上显示；错因已删掉，不用。</p>";
-  // 选项点选改答案
-  body.querySelectorAll(".opt").forEach(el => {
-    el.onclick = () => { c.answer = el.dataset.letter; renderSheet(); };
-  });
-  // 学科点改
+  if (c.pending) {
+    body.innerHTML = "<p><b>第 " + (sheetIndex+1) + " 题</b></p><p>正在识别…</p><p><button type='button' id='sheetSaveOne' disabled>生成解析并保存这道题</button></p>";
+    return;
+  }
+  const failHtml = c.failed ? "<p class='recog-fail'>没读出来，重拍或手动补</p>" : "";
+  const optRows = (c.options || []).map((o, i) => {
+    const letter = String.fromCharCode(65 + i);
+    const on = String(c.answer || "").toUpperCase().charAt(0) === letter ? " on" : "";
+    return "<div class='opt-edit-row'><button type='button' class='set-ans" + on + "' data-letter='" + letter + "' aria-label='把" + letter + "标为正确答案'>" + letter + "</button><textarea class='opt-edit' rows='2' aria-label='选项" + letter + "'>" + PWQ.escapeHtml(optionPlain(o)) + "</textarea><button type='button' class='secondary opt-del' data-i='" + i + "' aria-label='删除选项" + letter + "'>删除</button></div>";
+  }).join("");
+  const hasRealOpt = (c.options || []).some(optionPlain);
+  const ansHtml = hasRealOpt ? "" : "<label class='sheet-label'>正确答案</label><textarea class='answer-edit' rows='2' aria-label='正确答案' placeholder='判断题写对或错，主观题写参考答案'>" + PWQ.escapeHtml(c.answer || "") + "</textarea>";
+  const stemEmpty = !String(c.stem || "").trim();
+  body.innerHTML = "<p><b>第 " + (sheetIndex+1) + " 题</b> <span class='tag subjectTag' title='点一下改学科'>" + PWQ.escapeHtml(c.subject || "其他") + "</span><input class='subjectInput hidden' value='" + PWQ.escapeHtml(c.subject || "其他") + "' aria-label='学科' style='width:120px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px'></p>" +
+    failHtml +
+    "<label class='sheet-label'>题干</label><textarea class='stem-edit' rows='4' aria-label='题干' placeholder='识别不到就在这里手打题干'>" + PWQ.escapeHtml(c.stem || "") + "</textarea>" +
+    (optRows ? "<label class='sheet-label'>选项</label>" + optRows : "") +
+    "<p><button type='button' class='secondary' id='addOptBtn'>加一个选项</button></p>" +
+    ansHtml +
+    "<div class='explain'><b>红笔解析：</b><span>" + PWQ.escapeHtml(c.explain || "保存时会生成解析。") + "</span></div>" +
+    "<p><button type='button' id='sheetSaveOne'" + (c.saved || stemEmpty ? " disabled" : "") + ">" + (c.saved ? "这道题已经保存过了" : "生成解析并保存这道题") + "</button></p>";
+  const stemEl = body.querySelector(".stem-edit");
+  const saveBtn = body.querySelector("#sheetSaveOne");
+  const refreshSave = () => {
+    if (!saveBtn || c.saved) return;
+    saveBtn.disabled = !stemEl.value.trim();
+  };
+  if (stemEl) stemEl.addEventListener("input", () => { c.stem = stemEl.value; c.failed = false; const fail = body.querySelector(".recog-fail"); if (fail && stemEl.value.trim()) fail.hidden = true; refreshSave(); });
+  body.querySelectorAll(".opt-edit").forEach(el => el.addEventListener("input", () => flushSheetFields()));
+  const ansEl = body.querySelector(".answer-edit");
+  if (ansEl) ansEl.addEventListener("input", () => { c.answer = ansEl.value; });
+  body.querySelectorAll(".set-ans").forEach(el => { el.onclick = () => { flushSheetFields(); c.answer = el.dataset.letter; renderSheet(); }; });
+  body.querySelectorAll(".opt-del").forEach(el => { el.onclick = () => { flushSheetFields(); c.options.splice(Number(el.dataset.i), 1); renderSheet(); }; });
+  const addBtn = body.querySelector("#addOptBtn");
+  if (addBtn) addBtn.onclick = () => { flushSheetFields(); if (!c.options) c.options = []; c.options.push(""); renderSheet(); };
   const tag = body.querySelector(".subjectTag");
   const input = body.querySelector(".subjectInput");
   if (tag && input) {
     tag.onclick = () => { tag.classList.add("hidden"); input.classList.remove("hidden"); input.focus(); input.select(); };
-    const saveSub = () => { const v = input.value.trim() || c.subject; c.subject = v; tag.classList.remove("hidden"); input.classList.add("hidden"); renderSheet(); };
+    const saveSub = () => { c.subject = input.value.trim() || c.subject || "其他"; renderSheet(); };
     input.addEventListener("blur", saveSub);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
   }
-  const saveBtn = body.querySelector("#sheetSaveOne");
   if (saveBtn) {
-    if (c.saved) { saveBtn.textContent = "这道题已经保存过了"; saveBtn.disabled = true; }
     saveBtn.onclick = async () => {
+      flushSheetFields();
       if (c.saved || c.saving) { PWQ.toast("这道题已经保存过了，不会重复存。"); return; }
+      if (c.pending) { PWQ.toast("还在识别，请稍等。", "error"); return; }
+      const stem = String(c.stem || "").trim();
+      if (!stem) { PWQ.toast("题干是空的，不能保存。没读出来就手动补上题干。", "error"); refreshSave(); return; }
+      const opts = (c.options || []).filter(optionPlain);
+      c.stem = stem;
+      c.options = opts;
+      if (opts.length) { if (c.qkind === "主观题") c.qkind = "选择题"; }
+      else if (c.qkind === "选择题") c.qkind = "主观题";
       c.saving = true; saveBtn.disabled = true; saveBtn.textContent = "正在保存…";
-      await PWQ.ready();
+      await PWQ.ready({ questions: true });
       if (!PWQ.currentUser()) { c.saving = false; saveBtn.disabled = false; saveBtn.textContent = "生成解析并保存这道题"; PWQ.toast("请先去登录页登录，登录后才能把题存到云端。"); location.href = "index.html"; return; }
-      const batch = "未分组";
-      const q = { subject: c.subject, qkind: c.qkind, type: c.type, stem: c.stem, options: c.options, answer: c.answer, explain: "", reason: "", batch: batch, starred:false, mastered:false, streak:0, edited:false, note:"" };
+      const q = { subject: c.subject, qkind: c.qkind, type: c.type, stem: c.stem, options: c.options, answer: c.answer, explain: "", reason: "", batch: "未分组", starred:false, mastered:false, streak:0, edited:false, note:"" };
       q.explain = await PWQ.explainPlaceholder({stem: q.stem, options: q.options, answer: q.answer, type: q.type});
       c.explain = q.explain;
-      try { await PWQ.addQuestion(q); } catch(e) { c.saving = false; if (String(e.message || e).includes("已经保存过了")) c.saved = true; PWQ.toast(String(e.message || e)); renderSheet(); return; }
+      try { await PWQ.addQuestion(q); } catch(e) { c.saving = false; if (String(e.message || e).includes("已经保存过了") || String(e.message || e).includes("已经在错题库")) c.saved = true; PWQ.toast(String(e.message || e), "error"); renderSheet(); return; }
       c.saved = true; c.saving = false;
       PWQ.toast("这道题已保存到云端错题库。");
       renderSheet();
@@ -376,11 +416,11 @@ document.getElementById("recognize").onclick = async () => {
   }
   if (!multiMode && !currentPhotoDataUrl) { PWQ.toast("请先拍照或从相册选一张照片。"); return; }
   // 先打开抽屉占位，显示正在识别，不用假题目冒充真实识别
-  sheetCards = targets.map(() => ({ stem: "正在识别…", options: [], answer: "", subject: "其他", qkind: "选择题", type: "定性辨析类", explain: "" }));
+  sheetCards = targets.map(() => ({ pending: true, failed: false, stem: "", options: [], answer: "", subject: "其他", qkind: "选择题", type: "定性辨析类", explain: "" }));
   sheetIndex = 0;
   renderSheet();
   openSheet("peek");
-  PWQ.toast("正在用能看图的模型同时读 " + targets.length + " 道题，一般几秒到十几秒，读完会自动填进解析面板。");
+  PWQ.toast("正在读 " + targets.length + " 道题，读完一道就先显示一道。");
   document.getElementById("ocrNote").textContent = "正在读题…多道题是一起读的，不是排队一道一道等，读完解析面板里会自动出题目和选项。";
   const img = document.getElementById("photo");
   const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
@@ -397,39 +437,54 @@ document.getElementById("recognize").onclick = async () => {
       const iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
       const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
       const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
-      // 识别提速：裁出来的图先压到最长边 1600 像素、质量 0.85 再发，手机原图几兆发过去又慢又没用，1600 像素读题干选项足够了。
-      const scale = Math.min(1, 1600 / Math.max(sw, sh));
+      // 发给模型前先缩小。最长边 1280、JPEG 0.72：印刷题还看得清，上传比 1600/0.85 大约小两倍半。
+      const scale = Math.min(1, 1280 / Math.max(sw, sh));
       canvas.width = Math.max(1, Math.round(sw * scale)); canvas.height = Math.max(1, Math.round(sh * scale));
-      canvas.getContext("2d").drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.72);
       const res = await fetch(visionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anon, "apikey": anon },
         body: JSON.stringify({ image: cropDataUrl }),
       });
-      const data = await res.json();
-      if (data.usage && PWQ.recordTokenUsage) { try { await PWQ.recordTokenUsage({ model: "deepseek-flash", function_name: "vision", usage: data.usage }); } catch(e) {} }
+      let data = {};
+      try { data = await res.json(); } catch(e) { data = {}; }
+      if (!res.ok || data.error) throw new Error(data.error || data.message || ("识别失败（" + res.status + "）"));
+      if (data.usage && PWQ.recordTokenUsage) { PWQ.recordTokenUsage({ model: "deepseek-flash", function_name: "vision", usage: data.usage }).catch(() => {}); }
       stem = PWQ.cleanLatex(data.stem || ""); options = (data.options || []).map(o => PWQ.cleanLatex(o)); suggested = data.suggested_answer || ""; subject = data.subject || "其他"; qkind = data.qkind || "选择题"; explain_type = data.explain_type || "定性辨析类";
-      // 前端兜底：后端还没更新或模型只给了“其他”时，英文题干先自动判成英语，不直接丢给用户手动改；错了点题号旁的小药丸还能改。
       if (subject === "其他" && stem) {
         const latin = (stem.match(/[A-Za-z]/g) || []).length;
         const chinese = (stem.match(/[\u4e00-\u9fa5]/g) || []).length;
         if (latin >= 10 && latin > chinese) subject = "英语";
       }
-    } catch(e) { stem = ""; options = []; suggested = ""; subject = "其他"; }
-    // 逐道先出：这道一回来就填进面板、显示已识别几道，不用等最慢的那道全回来才一起出。
-    const card = { stem, options, answer: suggested, subject, qkind, type: explain_type, explain: "" };
+      if (!String(stem).trim() && !(options || []).filter(o => String(o || "").trim()).length) throw new Error("empty");
+    } catch(e) {
+      const card = { pending: false, failed: true, stem: "", options: [], answer: "", subject: "其他", qkind: "主观题", type: explain_type, explain: "" };
+      sheetCards[idx] = card;
+      doneCount++;
+      document.getElementById("ocrNote").textContent = "已处理 " + doneCount + " / " + targets.length + " 道…";
+      const typing = document.activeElement && document.getElementById("zybBody").contains(document.activeElement);
+      if (idx === sheetIndex || !typing) renderSheet();
+      return card;
+    }
+    const card = { pending: false, failed: false, stem, options, answer: suggested, subject, qkind, type: explain_type, explain: "" };
     sheetCards[idx] = card;
     doneCount++;
-    document.getElementById("ocrNote").textContent = "已识别 " + doneCount + " / " + targets.length + " 道…";
-    renderSheet();
+    document.getElementById("ocrNote").textContent = "已处理 " + doneCount + " / " + targets.length + " 道…";
+    const typingOk = document.activeElement && document.getElementById("zybBody").contains(document.activeElement);
+    if (idx === sheetIndex || !typingOk) renderSheet();
     return card;
   }));
   sheetCards = cards;
-  sheetIndex = 0;
-  renderSheet();
+  const typingEnd = document.activeElement && document.getElementById("zybBody").contains(document.activeElement);
+  if (!typingEnd) renderSheet();
   openSheet("open");
-  PWQ.toast("识别完成，共 " + cards.length + " 道题，解析面板顶部点编号可以切换题目，点选项可以改正确答案。");
+  const bad = cards.filter(c => c.failed).length;
+  if (bad) PWQ.toast("有 " + bad + " 道没读出来，重拍或在下面手动补。", "error");
+  else PWQ.toast("识别完成，共 " + cards.length + " 道。题干和选项都能改，再点保存。");
 };
 document.getElementById("zybRecordBtn").onclick = () => {
   if (sheetCards.length) { renderSheet(); openSheet("open"); return; }

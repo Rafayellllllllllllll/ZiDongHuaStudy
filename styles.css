@@ -41,7 +41,7 @@ button.navy,.btn.navy{background:var(--navy);color:#fff}
 .camscreen{position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column}
 .camscreen video{flex:1;width:100%;height:100%;object-fit:cover;background:#000}
 .cam-top{position:absolute;top:calc(10px + env(safe-area-inset-top));left:12px;z-index:2;padding:0;background:transparent}
-.cam-top a{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.cam-top a{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none}
 .cam-tip{display:none}
 .cam-tip{font-size:13px;text-align:right;max-width:70%}
 .album-btn{height:44px;padding:0 14px;border-radius:999px;border:1px solid #fff;background:#fff;color:var(--ink);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;white-space:nowrap}
@@ -72,7 +72,8 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 .big-photo{display:block;width:100%;text-align:center;font-size:18px;padding:16px 12px;margin:12px 0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
 .grid2 a{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 12px;text-decoration:none;color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.grid2 a .ic{font-size:24px;flex:0 0 auto}
+.grid2 a .ic{width:36px;height:36px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.grid2 a .ic svg{display:block}
 .grid2 a small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px}
 .statsbar{display:block;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;text-decoration:none;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.04)}
 /* 练习 / 错题点选：跟截图一样，选项整行白底细边，答对浅绿 + 右边“正确答案”，答错浅红 + 右边“你选了 ×” */
@@ -95,7 +96,7 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 .zyb-stage img{width:100%;height:auto;display:block}
 .zyb-box{position:absolute;border:2px solid rgba(217,45,32,.85);background:rgba(217,45,32,.08);border-radius:10px;cursor:pointer;touch-action:none;transition:border-color .15s,background .15s,box-shadow .15s}
 .zyb-box .zyb-num{position:absolute;top:-12px;left:8px;min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:#fff;border:1px solid var(--ink);color:#16233a;font-size:13px;font-weight:800;line-height:24px;text-align:center;pointer-events:none;z-index:3}
-.zyb-box .zyb-del{position:absolute;top:-10px;right:-10px;width:24px;height:24px;background:#fff;border:1px solid var(--line);border-radius:50%;font-weight:800;line-height:20px;text-align:center;cursor:pointer;z-index:2}
+.zyb-box .zyb-del{position:absolute;top:-18px;right:-18px;width:44px;height:44px;background:#fff;border:1px solid var(--line);border-radius:50%;font-weight:800;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
 .zyb-box .zyb-handle{position:absolute;right:-7px;bottom:-7px;width:30px;height:30px;background:var(--primary);border:3px solid #fff;border-radius:50%;cursor:nwse-resize;z-index:3;display:flex;align-items:center;justify-content:center;color:#000;font-size:16px;font-weight:800;line-height:1}
 .zyb-box.zyb-selected{border-color:var(--good);background:rgba(46,125,50,.16);box-shadow:0 0 0 2px rgba(46,125,50,.25)}
 .zyb-box.zyb-selected .zyb-num{background:var(--good);color:#fff;border-color:var(--good)}
@@ -116,7 +117,7 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 .zyb-tab{flex:0 0 auto;min-width:44px;height:38px;border-radius:999px;border:1px solid var(--line);background:#fff;font-weight:800;font-size:15px;cursor:pointer}
 .zyb-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
 .zyb-body{flex:1;overflow-y:auto;padding:16px 18px calc(24px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.zyb-close{position:absolute;top:10px;right:14px;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid var(--line);font-size:18px;line-height:28px;text-align:center;cursor:pointer;z-index:2}
+.zyb-close{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid var(--line);font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0;margin:0}
 .zyb-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.18);z-index:55;opacity:0;pointer-events:none;transition:opacity .3s}
 .zyb-backdrop.show{opacity:1;pointer-events:auto}
 @media (min-width:721px){.zyb-sheet{left:50%;transform:translateX(-50%) translateY(105%);width:720px}.zyb-sheet.open{transform:translateX(-50%) translateY(0)}.zyb-sheet.peek{transform:translateX(-50%) translateY(52vh)}}
@@ -141,7 +142,7 @@ main.zyb-full p button{margin-left:16px}
 .bank-pill{display:inline-block;border-radius:999px;padding:8px 16px;margin:4px;font-size:14px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
 .bank-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
 .qitem{position:relative}
-.star-btn{position:absolute;top:10px;right:10px;width:22px;height:22px;font-size:16px;line-height:1;background:transparent;border:none;color:#c9c0a8;cursor:pointer;padding:0;margin:0;z-index:2}
+.star-btn{position:absolute;top:4px;right:4px;width:44px;height:44px;font-size:22px;line-height:1;background:transparent;border:none;color:#c9c0a8;cursor:pointer;padding:0;margin:0;z-index:2;display:inline-flex;align-items:center;justify-content:center}
 .star-btn.on{color:#e8a100}
 .opt-explain{font-size:14px;line-height:1.6;margin:2px 0 10px 0}
 .opt-explain .opt-q{color:#16233a}
@@ -162,9 +163,9 @@ main.zyb-full p button{margin-left:16px}
 .kp-sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;background:#fff;border-top-left-radius:20px;border-top-right-radius:20px;box-shadow:0 -8px 30px rgba(0,0,0,.18);transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,.35,1);display:flex;flex-direction:column;max-height:92vh;height:92vh}
 .kp-sheet.open{transform:translateY(0)}
 .kp-sheet-body{flex:1;overflow-y:auto;padding:16px 18px calc(24px + env(safe-area-inset-bottom))}
-.kp-star{width:22px;height:22px;font-size:16px;line-height:1;background:transparent;border:none;color:#c9c0a8;cursor:pointer;padding:4px;margin:-4px;z-index:2}
+.kp-star{min-width:44px;min-height:44px;height:44px;width:auto;font-size:22px;line-height:1;background:transparent;border:none;color:#c9c0a8;cursor:pointer;padding:0 8px;margin:0;z-index:2;display:inline-flex;align-items:center;justify-content:center}
 .kp-star.on{color:#e8a100}
-.kp-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
+.kp-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 56px 16px 16px;margin:12px 0}
 .kp-name{font-size:18px;font-weight:800;margin:4px 0}
 .kp-sub{font-size:13px;color:var(--muted);margin:4px 0}
 .kp-summary{font-size:14px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -190,7 +191,7 @@ button,.btn{padding:10px 16px;margin:4px 4px 4px 0;font-size:14px}
 .bank-pill{padding:7px 13px;margin:3px;font-size:13px}
 .pills-scroll{padding:4px 2px 6px}
 .stat-bar{margin:0}
-.kp-card{padding:12px 14px;margin:10px 0}
+.kp-card{padding:12px 56px 12px 14px;margin:10px 0}
 .kp-name{font-size:17px;margin:3px 0}
 .kp-sub{margin:3px 0}
 .kp-summary{line-height:1.5}
@@ -222,9 +223,9 @@ main.zyb-full{padding-bottom:80px}
 .bank-opt.correct{background:#e8f5e9;border-color:#2e7d32;color:#1b5e20}
 .bank-check{flex:0 0 auto;font-size:12px;font-weight:700;color:#2e7d32;white-space:nowrap}
 .bank-answer{font-size:13px;line-height:1.45;margin:6px 0;font-weight:700}
-.bank-actions{margin:6px 0 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.bank-actions button,.bank-actions .btn{height:32px;padding:0 12px;margin:0;font-size:13px;line-height:32px;display:inline-flex;align-items:center}
-.bank-actions .editBtn,.bank-actions .delBtn{height:32px;padding:0 10px;font-size:12px}
+.bank-actions{margin:6px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bank-actions button,.bank-actions .btn{min-height:44px;height:44px;padding:0 14px;margin:0;font-size:14px;line-height:1;display:inline-flex;align-items:center}
+.bank-actions .editBtn,.bank-actions .delBtn{min-height:44px;height:44px;padding:0 14px;font-size:14px}
 .bank-tools{margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap}
 .bank-tool{height:32px;padding:0 12px;font-size:12px;display:inline-flex;align-items:center}
 
@@ -281,3 +282,15 @@ main.zyb-full{padding-bottom:80px}
   .cam-mode-btns button{padding:6px 8px;font-size:12px}
   .album-btn,.confirm-btn{padding:0 10px;font-size:13px}
 }
+button:disabled{opacity:.45;cursor:not-allowed}
+a.top-back,.top-back{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:44px;min-width:44px;padding:0 12px;margin:2px 8px 8px 0;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:700;font-size:14px;text-decoration:none;line-height:1;box-sizing:border-box}
+.bank-top .top-back,.kp-top .top-back{margin:0;flex:0 0 auto}
+.qitem,.opt,.bank-stem,.explain,.card,.statsbar{overflow-wrap:break-word}
+.recog-fail{color:#d92d20;font-weight:700;background:#fdecea;border:1px solid #f3b4ae;border-radius:12px;padding:10px 12px;margin:8px 0}
+.sheet-label{display:block;margin:10px 0 4px;font-weight:700;font-size:13px}
+.stem-edit,.opt-edit,.answer-edit{width:100%;margin:0 0 8px;min-height:72px;resize:vertical;font-size:15px}
+.opt-edit-row{display:flex;gap:8px;align-items:flex-start;margin:0 0 8px}
+.opt-edit-row .opt-edit{flex:1;min-height:44px;margin:0}
+.set-ans{flex:0 0 auto;width:44px;height:44px;min-width:44px;padding:0;margin:0;border-radius:12px}
+.set-ans.on{background:#2e7d32}
+.opt-del{flex:0 0 auto;min-height:44px;height:44px;padding:0 12px;margin:0}

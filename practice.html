@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>拍照错题本 · 练习</title>
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -19,24 +19,25 @@
   .chip.disabled{opacity:.45;cursor:not-allowed}
   .chip.disabled:active{transform:none}
 </style>
-<script src="supabase-js.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
-<script src="config.js"></script><script src="app.js"></script></head><body>
+<script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
+<script src="config.js" defer></script><script src="app.js" defer></script></head><body>
 <main>
+<a class="top-back" href="home.html" aria-label="返回主页">← 返回</a>
 <div class="card"><h1>练习</h1>
 <div id="subjectArea"><p class="small">正在加载科目…</p></div>
 <label>这次练几道？（五的倍数，最多 50）</label>
 <select id="count"><option>5</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option><option>35</option><option>40</option><option>45</option><option>50</option></select>
 <p><button id="start">开始练习</button>
-<button class="secondary" id="review">已掌握复查（隔一段时间抽查，骨架占位）</button></p>
+<button class="secondary" id="review">已掌握复查</button></p>
 </div>
-</main><footer>云端版 · 练习计数存在 Supabase</footer>
+</main>
 <script>
 let pool = [], idx = 0;
 let availableSubjects = [];
 let chipIsAll = true;
 let chipSelected = new Set();
 async function renderSubjects(){
-  await PWQ.ready();
+  await PWQ.ready({ questions: true });
   const area = document.getElementById("subjectArea");
   if (!PWQ.currentUser()) { area.innerHTML = "<p>请先去登录页登录，登录后才能看到错题库的科目。</p>"; return; }
   const all = PWQ.getQuestions();
@@ -96,7 +97,7 @@ function getSelectedSubjects(){
   return [...chipSelected];
 }
 async function start(){
-  await PWQ.ready();
+  await PWQ.ready({ questions: true });
   if (!PWQ.currentUser()) { PWQ.toast("请先去登录页登录，登录后才能练习云端的题。"); location.href = "index.html"; return; }
   const sel = getSelectedSubjects();
   if (!sel.length) { PWQ.toast("请至少选一个科目。"); return; }
@@ -109,9 +110,9 @@ async function start(){
   location.href = "practice-run.html";
 }
 document.getElementById("start").onclick = start;
-renderSubjects();
+document.addEventListener("DOMContentLoaded", function () { renderSubjects(); });
 document.getElementById("review").onclick = () =>
-  PWQ.toast("占位：已掌握复查应隔一段时间（例如一两周，具体天数待定）再随机抽查，抽查错了回到未掌握。当前骨架不自动排期。");
+  PWQ.toast("已掌握的题会过一阵子再抽出来复查。这个自动复查还没排上。");
 </script>
 <nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html">统计</a><a href="index.html?account=1">我的</a></nav>
 </body></html>
