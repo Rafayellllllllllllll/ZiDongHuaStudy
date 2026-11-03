@@ -420,7 +420,7 @@ document.getElementById("recognize").onclick = async () => {
   sheetIndex = 0;
   renderSheet();
   openSheet("peek");
-  PWQ.toast("正在用能看图的模型同时读 " + targets.length + " 道题，一般几秒到十几秒，读完会自动填进解析面板。");
+  PWQ.toast("正在读 " + targets.length + " 道题，读完一道就先显示一道。");
   document.getElementById("ocrNote").textContent = "正在读题…多道题是一起读的，不是排队一道一道等，读完解析面板里会自动出题目和选项。";
   const img = document.getElementById("photo");
   const visionUrl = (window.APP_CONFIG && window.APP_CONFIG.VISION_FUNCTION_URL) || "https://mjsmrltdwcnzmstbjzry.supabase.co/functions/v1/vision";
@@ -437,11 +437,14 @@ document.getElementById("recognize").onclick = async () => {
       const iw = cropImg.naturalWidth, ih = cropImg.naturalHeight;
       const sx = Math.max(0, box.x / 100 * iw), sy = Math.max(0, box.y / 100 * ih);
       const sw = Math.min(iw - sx, box.w / 100 * iw), sh = Math.min(ih - sy, box.h / 100 * ih);
-      // 识别提速：裁出来的图先压到最长边 1600 像素、质量 0.85 再发，手机原图几兆发过去又慢又没用，1600 像素读题干选项足够了。
-      const scale = Math.min(1, 1600 / Math.max(sw, sh));
+      // 发给模型前先缩小。最长边 1280、JPEG 0.72：印刷题还看得清，上传比 1600/0.85 大约小两倍半。
+      const scale = Math.min(1, 1280 / Math.max(sw, sh));
       canvas.width = Math.max(1, Math.round(sw * scale)); canvas.height = Math.max(1, Math.round(sh * scale));
-      canvas.getContext("2d").drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const cropDataUrl = canvas.toDataURL("image/jpeg", 0.72);
       const res = await fetch(visionUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": "Bearer " + anon, "apikey": anon },
@@ -450,7 +453,7 @@ document.getElementById("recognize").onclick = async () => {
       let data = {};
       try { data = await res.json(); } catch(e) { data = {}; }
       if (!res.ok || data.error) throw new Error(data.error || data.message || ("识别失败（" + res.status + "）"));
-      if (data.usage && PWQ.recordTokenUsage) { try { await PWQ.recordTokenUsage({ model: "deepseek-flash", function_name: "vision", usage: data.usage }); } catch(e) {} }
+      if (data.usage && PWQ.recordTokenUsage) { PWQ.recordTokenUsage({ model: "deepseek-flash", function_name: "vision", usage: data.usage }).catch(() => {}); }
       stem = PWQ.cleanLatex(data.stem || ""); options = (data.options || []).map(o => PWQ.cleanLatex(o)); suggested = data.suggested_answer || ""; subject = data.subject || "其他"; qkind = data.qkind || "选择题"; explain_type = data.explain_type || "定性辨析类";
       if (subject === "其他" && stem) {
         const latin = (stem.match(/[A-Za-z]/g) || []).length;
