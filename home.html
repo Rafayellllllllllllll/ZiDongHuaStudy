@@ -3,25 +3,25 @@
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="小错本">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>拍照错题本 · 主页</title>
+<title>小错本 · 主页</title>
 <link rel="stylesheet" href="styles.css">
 <style>.avatar{cursor:default}.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
 <script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js" defer></script><script src="app.js" defer></script>
 </head><body>
-<header class="home-head"><div class="logo">拍照<span>错题本</span></div>
-<div id="avatar" class="avatar">我</div></header>
+<header class="home-head"><div class="home-head-inner"><div class="brand"><span class="brand-mark" aria-hidden="true">错</span><div><div class="logo">小错本</div><div class="brand-sub">错过的题，留在这里</div></div></div><div id="avatar" class="avatar" aria-hidden="true">我</div></div></header>
 <main>
-<a class="btn big-photo" href="upload.html">拍照搜改题</a>
+<a class="btn big-photo" href="upload.html"><span class="big-photo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg></span><span class="big-photo-tx">拍照录错题<small>框住一道题，读出来再改</small></span></a>
 <div class="grid2">
-<a href="practice.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#d92d20" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></span><span>练习<small>从未掌握里随机出题</small></span></a>
-<a href="bank.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#d92d20" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h11a3 3 0 0 1 3 3v12H8a3 3 0 0 1-3-3V5z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 9h6"/></svg></span><span>错题本<small>全部错题，按学科分</small></span></a>
-<a href="knowledge.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#d92d20" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.2 4.6 5 .7-3.6 3.5.9 5.1L12 15.8 7.5 17.4l.9-5.1L4.8 8.8l5-.7L12 3.5z"/></svg></span><span>知识点<small>收藏的知识点，按学科分</small></span></a>
-<a href="notebook.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#d92d20" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h9a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6"/></svg></span><span>笔记本<small>自己粘贴知识点</small></span></a>
+<a href="practice.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg></span><span>练习<small>从未掌握里随机出题</small></span></a>
+<a href="bank.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h11a3 3 0 0 1 3 3v12H8a3 3 0 0 1-3-3V5z"/><path d="M5 17a3 3 0 0 1 3-3h11"/><path d="M9 9h6"/></svg></span><span>错题库<small>全部错题，按学科分</small></span></a>
+<a href="knowledge.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.2 4.6 5 .7-3.6 3.5.9 5.1L12 15.8 7.5 17.4l.9-5.1L4.8 8.8l5-.7L12 3.5z"/></svg></span><span>知识点<small>收藏的知识点，按学科分</small></span></a>
+<a href="notebook.html"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h9a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2z"/><path d="M9 8h6M9 12h6"/></svg></span><span>笔记本<small>自己记下的知识点</small></span></a>
 </div>
 <a class="statsbar" href="bank.html" id="stats">今天：正在加载…</a>
 </main>

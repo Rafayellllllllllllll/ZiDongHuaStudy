@@ -1,7 +1,7 @@
 {
-  "name": "拍照错题本",
-  "short_name": "错题本",
-  "description": "拍照搜改题，错题、知识点、练习都在这里",
+  "name": "小错本",
+  "short_name": "小错本",
+  "description": "拍照录错题，练习、知识点和笔记都在这里",
   "start_url": "home.html",
   "scope": "./",
   "display": "standalone",
