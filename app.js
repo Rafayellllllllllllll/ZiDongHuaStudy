@@ -922,15 +922,36 @@ function store(key, fallback){
   catch(e){ return fallback; }
 }
 function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function subjectTone(name){
+  const map = { "数学": "math", "英语": "eng", "语文": "chi", "物理": "phy", "化学": "chem", "生物": "bio", "政治": "pol", "历史": "his", "地理": "geo", "计算机": "cs" };
+  return map[name] || "other";
+}
+function tabSvg(id){
+  const p = {
+    home: "<path d=\"M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z\"/>",
+    bank: "<path d=\"M5 5h11a3 3 0 0 1 3 3v12H8a3 3 0 0 1-3-3V5z\"/><path d=\"M9 9h6\"/>",
+    practice: "<path d=\"M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z\"/>",
+    stats: "<path d=\"M5 19V10M12 19V5M19 19v-7\"/>",
+    me: "<circle cx=\"12\" cy=\"8\" r=\"3\"/><path d=\"M5 19c1.5-3 4-4.5 7-4.5S17.5 16 19 19\"/>"
+  };
+  return "<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">" + (p[id] || "") + "</svg>";
+}
+function mountTabs(){
+  const tabs = [["home","home.html","主页"],["bank","bank.html","错题"],["practice","practice.html","练习"],["stats","stats.html","统计"],["me","index.html?account=1","我的"]];
+  document.querySelectorAll("nav.tabbar").forEach(nav => {
+    const cur = nav.getAttribute("data-tab") || "";
+    nav.innerHTML = tabs.map(([id, href, label]) => "<a href=\"" + href + "\"" + (id === cur ? " class=\"active\" aria-current=\"page\"" : "") + ">" + tabSvg(id) + "<span>" + label + "</span></a>").join("");
+  });
+}
 
-window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin,
+window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin, subjectTone,
   toast, escapeHtml, cleanLatex, getQuestions, getCachedQuestions, saveQuestions, explainPlaceholder,
   ready, signInOrUp, signOut, signOutAll, addQuestion, updateQuestion, deleteQuestion,
   getKnowledgePoints, saveKnowledgePoints, kpId, isKnowledgeFavorited, toggleKnowledgePoint, linkKnowledgeToQuestion, extractKnowledgePoints, recordTokenUsage,
   getNotes, addNote, updateNote, deleteNote, loadProfile, saveFullNote,
   uploadNoteImage, signedUrlForNoteImage, prepareNoteHtml,
   dateInShanghai, todayShanghai, formatOption, optionLetter, answerLetter };
-document.addEventListener("DOMContentLoaded", banner);
+document.addEventListener("DOMContentLoaded", function () { banner(); mountTabs(); });
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function(){
     var swUrl = "sw.js";

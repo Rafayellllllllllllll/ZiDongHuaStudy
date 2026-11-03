@@ -59,12 +59,12 @@ function renderList(){
   list.innerHTML = "";
   const filtered = currentSubject === "全部" ? allQs : allQs.filter(q => (q.subject || "其他") === currentSubject);
   if (!filtered.length) {
-    list.innerHTML = "<p>这里还没有" + (currentSubject === "全部" ? "" : currentSubject + "的") + "错题。先去录错题。</p>";
+    list.innerHTML = "<div class='empty-panel'><strong>这里还没有" + (currentSubject === "全部" ? "" : PWQ.escapeHtml(currentSubject) + "的") + "错题</strong><p>拍一道，它就会出现在这。</p><p><a class='btn' href='upload.html'>拍照录错题</a></p></div>";
     return;
   }
   filtered.forEach(q => {
     const d = document.createElement("div");
-    d.className = "qitem" + (q.mastered ? " mastered" : "");
+    d.className = "qitem tone-" + PWQ.subjectTone(q.subject || "其他") + (q.mastered ? " mastered" : "");
     const cstDate = q.created_at ? PWQ.dateInShanghai(q.created_at) : "";
     const ansLetters = String(q.answer || "").toUpperCase().replace(/[^A-D]/g, "").split("");
     const optsHtml = (q.options && q.options.length) ? q.options.map(o => {
@@ -250,5 +250,5 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
-<nav class="bottomnav"><a href="home.html">主页</a><a href="stats.html">统计</a><a href="index.html?account=1">我的</a></nav>
+<nav class="tabbar" data-tab="bank"></nav>
 </body></html>
