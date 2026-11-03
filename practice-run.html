@@ -3,11 +3,12 @@
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="小错本">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>拍照错题本 · 练习答题</title>
+<title>小错本 · 练习答题</title>
 <link rel="stylesheet" href="styles.css">
 <script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js" defer></script><script src="app.js" defer></script>
@@ -20,6 +21,10 @@
   .opt.flash{background:#f7f0dd !important;border-color:#16233a !important;color:#16233a !important}
   .run-foot .self-btns{display:flex;gap:8px;flex-wrap:wrap}
   .run-foot button{min-height:44px}
+  .opt .mark.fb{font-size:20px;margin-left:10px;animation:fbpop .28s ease}
+  .run-foot button.correct{background:var(--good);color:#fff;border-color:var(--good)}
+  .run-foot button.wrong{background:var(--bad);color:#fff;border-color:var(--bad)}
+  @keyframes fbpop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 </style>
 </head><body>
 <main>
@@ -67,18 +72,24 @@ function show(){
     PWQ.escapeHtml(q.subject) + " · " + PWQ.escapeHtml(q.type) + "</p>" +
     "<p><b>" + PWQ.escapeHtml(q.stem) + "</b></p>" +
     opts + unsureNote + noOptNote + foot + "</div>";
-  // 点选项：先变绿闪 0.25 秒，再自动下一题，不用再点提交或下一题。
-  // 0.25 秒是网上常见的正常速度：小元素反馈一般 200-300 毫秒，Material 的点击波纹也是 200 毫秒左右；
-  // 先等一帧把绿色画出来，再等 250 毫秒跳，绿色能看清，又不会拖慢练题节奏（仍在 400 毫秒的流畅感界限内）。
+  // 点选项后先给出对错：对是绿底 ✓，错是红底 ✗，停一小下再下一题。答案详解仍等全部做完再出。
   let advancing = false;
+  function showMark(el, ok) {
+    el.classList.add(ok ? "correct" : "wrong");
+    const mark = document.createElement("span");
+    mark.className = "mark fb";
+    mark.textContent = ok ? "✓" : "✗";
+    el.appendChild(mark);
+  }
   card.querySelectorAll(".opt").forEach(b => {
     b.onclick = () => {
       if (advancing) return;
       advancing = true;
-      card.querySelectorAll(".opt").forEach(x => x.disabled = true);
-      b.classList.add("flash");
+      const ok = PWQ.answerLetter(b.dataset.ans) === PWQ.answerLetter(q.answer);
+      card.querySelectorAll(".opt").forEach(x => { if (x !== b) x.disabled = true; });
+      showMark(b, ok);
       answer(idx, b.dataset.ans, false);
-      requestAnimationFrame(() => setTimeout(() => { advancing = false; advance(); }, 250));
+      setTimeout(() => { advancing = false; advance(); }, 560);
     };
   });
   document.getElementById("backBtn").onclick = () => {
@@ -90,8 +101,22 @@ function show(){
   if (unsureBtn) unsureBtn.onclick = () => { answer(idx, "", true); advance(); };
   const knowBtn = document.getElementById("knowBtn");
   const dontBtn = document.getElementById("dontBtn");
-  if (knowBtn) knowBtn.onclick = () => { answer(idx, "", false, "know"); advance(); };
-  if (dontBtn) dontBtn.onclick = () => { answer(idx, "", false, "dont"); advance(); };
+  if (knowBtn) knowBtn.onclick = () => {
+    if (advancing) return;
+    advancing = true;
+    knowBtn.classList.add("correct");
+    knowBtn.textContent = "我会了 ✓";
+    answer(idx, "", false, "know");
+    setTimeout(() => { advancing = false; advance(); }, 480);
+  };
+  if (dontBtn) dontBtn.onclick = () => {
+    if (advancing) return;
+    advancing = true;
+    dontBtn.classList.add("wrong");
+    dontBtn.textContent = "不会 ✗";
+    answer(idx, "", false, "dont");
+    setTimeout(() => { advancing = false; advance(); }, 480);
+  };
 }
 async function answer(i, chosen, unsure, selfGrade){
   const q = pool[i];

@@ -92,8 +92,9 @@ footer{padding:20px;text-align:center;color:var(--muted);font-size:13px}
 /* ===== 作业帮式拍照搜题交互（upload.html 专用，不改动旧卡片样式） ===== */
 .zyb-page{padding-bottom:0}
 .zyb-stage-wrap{position:relative;width:100%;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.zyb-stage{position:relative;width:100%;line-height:0}
-.zyb-stage img{width:100%;height:auto;display:block}
+.zyb-stage{position:relative;width:100%;line-height:0;touch-action:none;-webkit-user-select:none;user-select:none;cursor:crosshair}
+.zyb-stage img{width:100%;height:auto;display:block;touch-action:none;-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none}
+.zyb-drawing{pointer-events:none;border-style:dashed;z-index:5}
 .zyb-box{position:absolute;border:2px solid rgba(217,45,32,.85);background:rgba(217,45,32,.08);border-radius:10px;cursor:pointer;touch-action:none;transition:border-color .15s,background .15s,box-shadow .15s}
 .zyb-box .zyb-num{position:absolute;top:-12px;left:8px;min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:#fff;border:1px solid var(--ink);color:#16233a;font-size:13px;font-weight:800;line-height:24px;text-align:center;pointer-events:none;z-index:3}
 .zyb-box .zyb-del{position:absolute;top:-18px;right:-18px;width:44px;height:44px;background:#fff;border:1px solid var(--line);border-radius:50%;font-weight:800;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
@@ -262,6 +263,7 @@ main.zyb-full{padding-bottom:80px}
 /* 拍照多页：相机下方选单页/多页，右下角确认进框选；框选时按页切换 */
 .cam-pages{font-size:13px;white-space:nowrap}
 .page-switcher{display:flex;align-items:center;gap:8px;padding:8px 16px}
+.page-switcher.hidden{display:none !important}
 .page-switcher button{margin:0;padding:8px 12px;font-size:13px}
 .page-switcher span{font-size:14px;font-weight:700;flex:1;text-align:center}
 
@@ -294,3 +296,39 @@ a.top-back,.top-back{display:inline-flex;align-items:center;justify-content:cent
 .set-ans{flex:0 0 auto;width:44px;height:44px;min-width:44px;padding:0;margin:0;border-radius:12px}
 .set-ans.on{background:#2e7d32}
 .opt-del{flex:0 0 auto;min-height:44px;height:44px;padding:0 12px;margin:0}
+
+/* ===== 小错本：在原配色上把界面收成一个完整的手机应用，宽屏也不缩成一条 ===== */
+header.home-head{display:block;padding:0;background:rgba(253,248,240,.94);border-bottom:1px solid rgba(233,224,207,.95);backdrop-filter:saturate(1.2) blur(12px)}
+.home-head-inner{width:min(1080px,100%);margin:0 auto;padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{width:40px;height:40px;border-radius:14px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;box-shadow:0 6px 14px rgba(217,45,32,.25);flex:0 0 auto}
+.home-head .logo{font-size:20px;letter-spacing:-.03em;line-height:1.1}
+.brand-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.brand-kicker{margin:0 0 2px;font-size:13px;font-weight:800;letter-spacing:.14em;color:var(--primary)}
+.avatar{width:44px;height:44px;font-size:16px;box-shadow:0 4px 12px rgba(22,35,58,.06)}
+.big-photo{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px 16px;border-radius:22px;box-shadow:0 12px 28px rgba(217,45,32,.22);margin:14px 0 8px}
+.big-photo:active{transform:scale(.985)}
+.big-photo-ic{width:48px;height:48px;border-radius:16px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.big-photo-tx{display:block;font-size:18px;line-height:1.25}
+.big-photo small{display:block;font-weight:500;font-size:13px;opacity:.92;margin-top:3px}
+.grid2{gap:12px}
+.grid2 a{border-radius:18px;padding:14px 12px;box-shadow:0 8px 20px rgba(22,35,58,.05);transition:transform .16s ease,box-shadow .16s ease}
+.grid2 a:active{transform:scale(.98)}
+.grid2 a .ic{width:46px;height:46px;border-radius:14px;background:#fdecea;color:var(--primary)}
+.grid2 a:nth-child(2) .ic{background:#f7f0dd;color:var(--navy)}
+.grid2 a:nth-child(3) .ic{background:#e8f5e9;color:var(--good)}
+.grid2 a:nth-child(4) .ic{background:#eef3fb;color:#2563eb}
+.card,.qitem,.kp-card,.statsbar{box-shadow:0 8px 22px rgba(22,35,58,.05)}
+.statsbar{border-radius:18px;transition:transform .16s ease}
+.statsbar:active{transform:scale(.99)}
+.opt,.bank-pill,.pill,.top-back,button,.btn{transition:transform .14s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease}
+.bank-main #list > p:only-child{margin:16px 0;padding:28px 16px;text-align:center;background:#fff;border:1px dashed var(--line);border-radius:18px}
+@media (min-width:980px){
+  main,.bank-main,.stats-main{max-width:1080px;padding-left:28px;padding-right:28px}
+  .home-head-inner{padding-left:28px;padding-right:28px}
+  .grid2{grid-template-columns:repeat(4,1fr);gap:16px}
+  .bottomnav{left:50%;right:auto;transform:translateX(-50%);width:min(1080px,calc(100% - 32px));border-radius:20px 20px 0 0;box-shadow:0 -10px 30px rgba(22,35,58,.08)}
+}
+@media (prefers-reduced-motion:reduce){
+  .grid2 a,.big-photo,.opt,.statsbar{transition:none}
+}

@@ -3,11 +3,12 @@
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="小错本">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#fdf8f0">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>拍照错题本 · 录错题</title>
+<title>小错本 · 录错题</title>
 <link rel="stylesheet" href="styles.css">
 <script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js" defer></script><script src="app.js" defer></script>
@@ -145,26 +146,73 @@ function renderBoxes(){
   });
   updateBar();
 }
-// 在照片上拖一下，补一个新框：按住空白处拖动，松手就生成一个框。
-let dragStart = null;
-stage.addEventListener("pointerdown", (e) => {
-  if (e.target !== stage && e.target.tagName !== "IMG") return;
+// 在照片上拖出新框。必须挡住图片原生拖拽和页面滚动，并用 pointer capture，
+// 否则桌面会拖走图片，手机上手指一滑手势就被浏览器拿走，框就画不出来。
+let drawGesture = null;
+function stagePoint(e) {
   const r = stage.getBoundingClientRect();
-  const t = e.touches ? e.touches[0] : e;
-  dragStart = { x: (t.clientX - r.left) / r.width * 100, y: (t.clientY - r.top) / r.height * 100 };
-});
-stage.addEventListener("pointerup", (e) => {
-  if (!dragStart) return;
-  const r = stage.getBoundingClientRect();
-  const t = e.changedTouches ? e.changedTouches[0] : e;
-  const x2 = (t.clientX - r.left) / r.width * 100, y2 = (t.clientY - r.top) / r.height * 100;
-  const x = Math.min(dragStart.x, x2), y = Math.min(dragStart.y, y2);
-  const w = Math.abs(x2 - dragStart.x), h = Math.abs(y2 - dragStart.y);
-  dragStart = null;
-  if (w > 3 && h > 2) {
+  const w = r.width || 1, h = r.height || 1;
+  return {
+    x: Math.max(0, Math.min(100, (e.clientX - r.left) / w * 100)),
+    y: Math.max(0, Math.min(100, (e.clientY - r.top) / h * 100))
+  };
+}
+function canStartDraw(e) {
+  if (e.button != null && e.button !== 0) return false;
+  const t = e.target;
+  if (t === stage || t.id === "photo" || (t.tagName === "IMG" && stage.contains(t))) return true;
+  return false;
+}
+function paintDraft(a, b) {
+  let el = stage.querySelector(".zyb-drawing");
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "zyb-box zyb-drawing";
+    el.setAttribute("aria-hidden", "true");
+    stage.appendChild(el);
+  }
+  const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+  el.style.left = x + "%";
+  el.style.top = y + "%";
+  el.style.width = Math.abs(b.x - a.x) + "%";
+  el.style.height = Math.abs(b.y - a.y) + "%";
+}
+function clearDraft() {
+  const el = stage.querySelector(".zyb-drawing");
+  if (el) el.remove();
+}
+function endDraw(e) {
+  if (!drawGesture || e.pointerId !== drawGesture.id) return;
+  const end = stagePoint(e);
+  const a = drawGesture.start;
+  drawGesture = null;
+  clearDraft();
+  const x = Math.min(a.x, end.x), y = Math.min(a.y, end.y);
+  const w = Math.abs(end.x - a.x), h = Math.abs(end.y - a.y);
+  if (w > 2.5 && h > 1.8) {
     boxes.push({ x: x, y: y, w: w, h: h, selected: false, selOrder: 0, label: "手动框 " + (boxes.length + 1) });
     renderBoxes();
   }
+}
+stage.addEventListener("pointerdown", (e) => {
+  if (!canStartDraw(e)) return;
+  if (drawGesture) return;
+  e.preventDefault();
+  const p = stagePoint(e);
+  drawGesture = { id: e.pointerId, start: p };
+  try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+  paintDraft(p, p);
+});
+stage.addEventListener("pointermove", (e) => {
+  if (!drawGesture || e.pointerId !== drawGesture.id) return;
+  e.preventDefault();
+  paintDraft(drawGesture.start, stagePoint(e));
+});
+stage.addEventListener("pointerup", endDraw);
+stage.addEventListener("pointercancel", (e) => {
+  if (!drawGesture || e.pointerId !== drawGesture.id) return;
+  drawGesture = null;
+  clearDraft();
 });
 async function showImage(file){
   if (!file) return;
@@ -173,7 +221,7 @@ async function showImage(file){
   reader.onload = () => { currentPhotoDataUrl = reader.result; };
   reader.readAsDataURL(file);
   const url = URL.createObjectURL(file);
-  stage.innerHTML = '<img id="photo" src="' + url + '" alt="上传的照片预览（不存储）">';
+  stage.innerHTML = '<img id="photo" draggable="false" src="' + url + '" alt="上传的照片预览（不存储）">';
   boxes = [];
   renderBoxes();
   stopCamera();
@@ -242,7 +290,7 @@ function showMultiPage(index){
   boxes = page.boxes;
   currentPhotoFile = null;
   currentPhotoDataUrl = page.dataUrl;
-  stage.innerHTML = '<img id="photo" src="' + page.url + '" alt="第 ' + (currentPageIndex + 1) + ' 页照片">';
+  stage.innerHTML = '<img id="photo" draggable="false" src="' + page.url + '" alt="第 ' + (currentPageIndex + 1) + ' 页照片">';
   renderBoxes();
   document.getElementById("pageSwitcher").classList.remove("hidden");
   document.getElementById("pageIndicator").textContent = "第 " + (currentPageIndex + 1) + " / " + photoPages.length + " 页";
