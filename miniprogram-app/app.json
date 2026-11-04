@@ -1,0 +1,62 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/bank/bank",
+    "pages/practice/practice",
+    "pages/stats/stats",
+    "pages/me/me",
+    "pages/capture/capture",
+    "pages/question/question",
+    "pages/session/session",
+    "pages/member/member"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#f6fbf8",
+    "navigationBarTitleText": "小错本",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6fbf8",
+    "backgroundTextStyle": "dark",
+    "backgroundColorTop": "#f6fbf8",
+    "backgroundColorBottom": "#f6fbf8"
+  },
+  "tabBar": {
+    "color": "#8aa39a",
+    "selectedColor": "#1f8f74",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "主页",
+        "iconPath": "assets/tab/home.png",
+        "selectedIconPath": "assets/tab/home-on.png"
+      },
+      {
+        "pagePath": "pages/bank/bank",
+        "text": "错题",
+        "iconPath": "assets/tab/bank.png",
+        "selectedIconPath": "assets/tab/bank-on.png"
+      },
+      {
+        "pagePath": "pages/practice/practice",
+        "text": "练习",
+        "iconPath": "assets/tab/practice.png",
+        "selectedIconPath": "assets/tab/practice-on.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计",
+        "iconPath": "assets/tab/stats.png",
+        "selectedIconPath": "assets/tab/stats-on.png"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的",
+        "iconPath": "assets/tab/me.png",
+        "selectedIconPath": "assets/tab/me-on.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,39 @@
+<view class="page">
+  <view class="head-row">
+    <text class="h1">错题库</text>
+    <text class="text-btn" bindtap="dedupe">清理重复</text>
+  </view>
+  <scroll-view class="scroller" scroll-x show-scrollbar="{{false}}">
+    <view class="chips">
+      <view
+        wx:for="{{filters}}"
+        wx:key="name"
+        class="chip {{item.on ? 'on' : ''}}"
+        data-name="{{item.name}}"
+        hover-class="pressed"
+        bindtap="pickFilter"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{empty}}" class="empty">
+    <text class="empty-title">{{emptyTitle}}</text>
+    <text class="muted">拍一道，它就会出现在这。</text>
+    <view class="btn" hover-class="pressed" bindtap="goCapture">拍照录错题</view>
+  </view>
+
+  <block wx:else>
+    <view class="qcard" wx:for="{{rows}}" wx:key="id" data-id="{{item.id}}" hover-class="pressed" bindtap="open">
+      <view class="qtop">
+        <view class="tags">
+          <text class="tag">{{item.subject}}</text>
+          <text class="tag" wx:if="{{item.qkind}}">{{item.qkind}}</text>
+          <text class="tag" wx:if="{{item.mastered}}">已掌握</text>
+        </view>
+        <text class="star {{item.starred ? 'on' : ''}}" data-id="{{item.id}}" catchtap="toggleStar">{{item.starred ? "★" : "☆"}}</text>
+      </view>
+      <text class="stem">{{item.stem}}</text>
+      <text class="muted">{{item.dueLabel}} · {{item.dateText}}</text>
+    </view>
+  </block>
+</view>

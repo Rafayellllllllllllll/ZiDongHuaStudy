@@ -1,0 +1,42 @@
+<view class="page">
+  <text class="h1">练习</text>
+  <text class="muted hint">不做自动解析。有选项就对着你记下的答案看；没有选项就自己点「我会了」或「不会」。连续三次「我会了」会标成已经会了。</text>
+
+  <view wx:if="{{empty}}" class="empty">
+    <text class="empty-title">错题库里还没有题</text>
+    <text class="muted">先去录错题。</text>
+    <view class="btn" hover-class="pressed" bindtap="goCapture">拍照录错题</view>
+  </view>
+
+  <block wx:else>
+    <text class="label">选科目</text>
+    <scroll-view class="scroller" scroll-x show-scrollbar="{{false}}">
+      <view class="chips">
+        <view class="chip {{allOn ? 'on' : ''}}" hover-class="pressed" bindtap="pickAll">{{allOn ? "✓ 全部" : "全部"}}</view>
+        <view
+          wx:for="{{chips}}"
+          wx:key="name"
+          class="chip {{item.on ? 'on' : ''}} {{item.disabled ? 'off' : ''}}"
+          data-name="{{item.name}}"
+          hover-class="pressed"
+          bindtap="pickSubject"
+        >{{item.on ? "✓ " : ""}}{{item.name}}</view>
+      </view>
+    </scroll-view>
+
+    <text class="label">这次练几道？（五的倍数）</text>
+    <view class="chips wrap">
+      <view
+        wx:for="{{counts}}"
+        wx:key="n"
+        class="chip {{item.on ? 'on' : ''}}"
+        data-n="{{item.n}}"
+        hover-class="pressed"
+        bindtap="pickCount"
+      >{{item.n}}</view>
+    </view>
+
+    <view class="btn" hover-class="pressed" bindtap="start">开始练习</view>
+    <view class="btn ghost" hover-class="pressed" bindtap="reviewMastered">已掌握复查</view>
+  </block>
+</view>

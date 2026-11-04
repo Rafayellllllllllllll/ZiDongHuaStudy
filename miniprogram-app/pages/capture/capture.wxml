@@ -1,0 +1,55 @@
+<view class="page">
+  <text class="h1">拍照录错题</text>
+  <text class="muted">拍一张或从相册选。认出来的字可以改，空题干存不了。</text>
+
+  <view class="row-btns">
+    <view class="btn gap" hover-class="pressed" data-source="camera" bindtap="choose">拍照</view>
+    <view class="btn soft" hover-class="pressed" data-source="album" bindtap="choose">相册</view>
+  </view>
+
+  <view wx:if="{{imagePath}}" class="stage">
+    <image class="stage-img" src="{{imagePath}}" mode="widthFix"></image>
+    <view class="crop"></view>
+    <text class="crop-tip">裁剪还没接上，先按整张照片识别</text>
+  </view>
+  <view wx:if="{{imagePath}}" class="btn ghost" hover-class="pressed" bindtap="cropInfo">调整裁剪（即将支持）</view>
+
+  <view class="btn {{canRecognize ? '' : 'off'}}" hover-class="pressed" bindtap="recognize">{{recognizing ? "正在读题…" : "开始识别"}}</view>
+  <view class="btn ghost" hover-class="pressed" bindtap="writeOwn">自己写题干</view>
+
+  <block wx:if="{{editor}}">
+    <view wx:if="{{stub}}" class="banner">下面是占位文字，不是这张照片读出来的。请改成题目原文再保存。</view>
+    <text class="label">题干</text>
+    <textarea class="field" value="{{stem}}" maxlength="2000" auto-height placeholder="把题目写在这里" bindinput="onStem"></textarea>
+
+    <text class="label">题型</text>
+    <view class="chips wrap">
+      <view wx:for="{{qkinds}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-name="{{item.name}}" bindtap="pickKind">{{item.name}}</view>
+    </view>
+
+    <block wx:if="{{isChoice}}">
+      <text class="label">选项（一行一个，选填）</text>
+      <textarea class="field" value="{{optionsText}}" maxlength="800" auto-height placeholder="A. …" bindinput="onOptions"></textarea>
+    </block>
+
+    <text class="label">你记下的答案（选填）</text>
+    <textarea class="field" value="{{answer}}" maxlength="200" auto-height placeholder="以后复习时自己对照，不会自动生成解析" bindinput="onAnswer"></textarea>
+
+    <text class="label">备注（选填）</text>
+    <textarea class="field" value="{{note}}" maxlength="500" auto-height placeholder="想记的一句话，不是解析" bindinput="onNote"></textarea>
+
+    <text class="label">学科</text>
+    <view class="chips wrap">
+      <view wx:for="{{subjects}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-name="{{item.name}}" bindtap="pickSubject">{{item.name}}</view>
+      <view class="chip" bindtap="addSubject">自定义</view>
+    </view>
+
+    <text class="label">标签</text>
+    <view class="chips wrap">
+      <view wx:for="{{tags}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-name="{{item.name}}" bindtap="pickTag">{{item.name}}</view>
+      <view class="chip" bindtap="addTag">自定义</view>
+    </view>
+
+    <view class="btn" hover-class="pressed" bindtap="save">保存到错题本</view>
+  </block>
+</view>

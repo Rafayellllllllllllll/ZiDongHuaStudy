@@ -1,0 +1,58 @@
+<view class="page">
+  <text class="h1">统计</text>
+  <text class="muted">按北京时间，看这段时间里新记下的题。</text>
+
+  <view class="stat3">
+    <view class="stat">
+      <text class="stat-num">{{total}}</text>
+      <text class="stat-label">全部</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{mastered}}</text>
+      <text class="stat-label">已掌握</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{due}}</text>
+      <text class="stat-label">待复习</text>
+    </view>
+  </view>
+
+  <scroll-view class="scroller" scroll-x show-scrollbar="{{false}}">
+    <view class="chips">
+      <view wx:for="{{ranges}}" wx:key="key" class="chip {{item.on ? 'on' : ''}}" data-key="{{item.key}}" bindtap="setRange">{{item.label}}</view>
+    </view>
+  </scroll-view>
+  <text class="muted">{{rangeText}}</text>
+  <scroll-view class="scroller" scroll-x show-scrollbar="{{false}}">
+    <view class="chips">
+      <view class="chip {{viewSubject ? 'on' : ''}}" data-view="subject" bindtap="setView">按学科统计</view>
+      <view class="chip {{viewSubject ? '' : 'on'}}" data-view="date" bindtap="setView">按日期统计</view>
+    </view>
+  </scroll-view>
+
+  <scroll-view class="chart-scroll" scroll-x show-scrollbar="{{false}}">
+    <view class="chart" style="width: {{chartWidth}}rpx;">
+      <view class="col {{item.on ? 'on' : ''}}" wx:for="{{bars}}" wx:key="key" data-key="{{item.key}}" data-label="{{item.label}}" bindtap="pickBar">
+        <text class="col-count">{{item.count}}</text>
+        <view class="col-track"><view class="col-fill" style="height: {{item.pct}}%;"></view></view>
+        <text class="col-label">{{item.label}}</text>
+      </view>
+    </view>
+  </scroll-view>
+  <text class="muted">点一根柱子，看对应的错题。</text>
+
+  <view wx:if="{{pickedTitle}}" class="sec">
+    <text class="sec-title">{{pickedTitle}}</text>
+    <view wx:if="{{pickedEmpty}}" class="empty">
+      <text class="empty-title">这里没有新题</text>
+      <text class="muted">换个范围再看看。</text>
+    </view>
+    <view wx:else class="row" wx:for="{{picked}}" wx:key="id" data-id="{{item.id}}" hover-class="pressed" bindtap="open">
+      <view class="dot tone-{{item.tone}}"></view>
+      <view class="row-copy">
+        <text class="row-sub">{{item.subject}} · {{item.dateText}}</text>
+        <text class="row-stem">{{item.stem}}</text>
+      </view>
+    </view>
+  </view>
+</view>

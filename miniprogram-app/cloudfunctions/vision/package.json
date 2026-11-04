@@ -1,0 +1,6 @@
+{
+  "name": "vision",
+  "version": "0.1.0",
+  "description": "题目识别占位。未部署，小程序当前不会调用。",
+  "main": "index.js"
+}

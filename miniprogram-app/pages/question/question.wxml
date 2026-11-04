@@ -1,0 +1,72 @@
+<view class="page">
+  <view wx:if="{{missing}}" class="empty">
+    <text class="empty-title">这道题找不到了</text>
+    <text class="muted">可能已经删掉了。</text>
+  </view>
+
+  <block wx:elif="{{card && !editing}}">
+    <view class="tags">
+      <text class="tag">{{card.subject}}</text>
+      <text class="tag" wx:if="{{card.qkind}}">{{card.qkind}}</text>
+      <text class="tag" wx:for="{{card.tags}}" wx:key="*this">{{item}}</text>
+      <text class="tag" wx:if="{{card.dateText}}">{{card.dateText}}</text>
+    </view>
+    <view class="panel">
+      <text class="stem">{{card.fullStem}}</text>
+      <view class="opt" wx:for="{{card.optionRows}}" wx:key="letter">
+        <text class="opt-letter">{{item.letter}}</text>
+        <text>{{item.text}}</text>
+      </view>
+      <text wx:if="{{card.answer}}" class="muted hint">记下的答案：{{card.answer}}</text>
+      <text wx:if="{{card.note}}" class="muted hint">备注：{{card.note}}</text>
+    </view>
+    <image wx:if="{{card.image && !imageBroken}}" class="photo-detail" src="{{card.image}}" mode="widthFix" bindtap="preview" binderror="imageError"></image>
+
+    <view class="panel">
+      <text class="sec-title">{{card.dueLabel}}</text>
+      <text class="muted hint">复习间隔是 1、2、4、7、15 天。记得就往后隔得更久，忘记就回到 1 天。15 天那次还记得，就标成已掌握。</text>
+      <text class="muted">复习 {{card.reviewCount}} 次 · 忘记 {{card.forgotCount}} 次</text>
+      <text class="muted hint">这一版不生成解析。</text>
+    </view>
+
+    <view class="row-btns" wx:if="{{!card.mastered}}">
+      <view class="btn gap" hover-class="pressed" bindtap="review">现在复习</view>
+      <view class="btn ghost" hover-class="pressed" bindtap="toggleStar">{{card.starred ? "取消星标" : "标星"}}</view>
+    </view>
+    <view wx:else class="btn ghost" hover-class="pressed" bindtap="toggleStar">{{card.starred ? "取消星标" : "标星"}}</view>
+    <view wx:if="{{card.mastered}}" class="btn soft" hover-class="pressed" bindtap="unmaster">重新放回复习</view>
+    <view wx:else class="btn apricot" hover-class="pressed" bindtap="master">标记已掌握</view>
+    <view class="btn ghost" hover-class="pressed" bindtap="startEdit">编辑</view>
+    <view class="btn coral" hover-class="pressed" bindtap="remove">删除这道题</view>
+  </block>
+
+  <block wx:elif="{{editing}}">
+    <text class="h1">改这道题</text>
+    <text class="label">题干</text>
+    <textarea class="field" value="{{stem}}" maxlength="2000" auto-height bindinput="onStem"></textarea>
+    <text class="label">题型</text>
+    <view class="chips wrap">
+      <view wx:for="{{qkinds}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-name="{{item.name}}" bindtap="pickKind">{{item.name}}</view>
+    </view>
+    <block wx:if="{{isChoice}}">
+      <text class="label">选项（一行一个）</text>
+      <textarea class="field" value="{{optionsText}}" maxlength="800" auto-height bindinput="onOptions"></textarea>
+    </block>
+    <text class="label">记下的答案</text>
+    <textarea class="field" value="{{answer}}" maxlength="200" auto-height bindinput="onAnswer"></textarea>
+    <text class="label">备注</text>
+    <textarea class="field" value="{{note}}" maxlength="500" auto-height bindinput="onNote"></textarea>
+    <text class="label">学科</text>
+    <view class="chips wrap">
+      <view wx:for="{{subjects}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-name="{{item.name}}" bindtap="pickSubject">{{item.name}}</view>
+      <view class="chip" bindtap="addSubject">自定义</view>
+    </view>
+    <text class="label">标签</text>
+    <view class="chips wrap">
+      <view wx:for="{{tags}}" wx:key="name" class="chip {{item.on ? 'on' : ''}}" data-name="{{item.name}}" bindtap="pickTag">{{item.name}}</view>
+      <view class="chip" bindtap="addTag">自定义</view>
+    </view>
+    <view class="btn" hover-class="pressed" bindtap="saveEdit">保存修改</view>
+    <view class="btn ghost" hover-class="pressed" bindtap="cancelEdit">取消</view>
+  </block>
+</view>

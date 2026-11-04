@@ -1,0 +1,57 @@
+<view class="page">
+  <view class="me-avatar">{{initial}}</view>
+  <text class="me-name">{{nickname}}</text>
+  <text class="muted" style="text-align: center; display: block;">题目存在这台手机上。云同步还没接。</text>
+
+  <view class="stat3">
+    <view class="stat">
+      <text class="stat-num">{{total}}</text>
+      <text class="stat-label">错题</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{due}}</text>
+      <text class="stat-label">待复习</text>
+    </view>
+    <view class="stat">
+      <text class="stat-num">{{mastered}}</text>
+      <text class="stat-label">已掌握</text>
+    </view>
+  </view>
+
+  <view class="menu" hover-class="pressed" bindtap="rename">
+    <view>
+      <text class="menu-title">怎么称呼你</text>
+      <text class="menu-sub">只改这台手机上的称呼</text>
+    </view>
+    <text class="sec-link">修改</text>
+  </view>
+
+  <view class="menu" hover-class="pressed" bindtap="goMember">
+    <view>
+      <text class="menu-title">会员</text>
+      <text class="menu-sub">9.9 永久 · 即将开放</text>
+    </view>
+    <text class="sec-link">查看</text>
+  </view>
+
+  <view class="menu" hover-class="pressed" bindtap="reset">
+    <view>
+      <text class="menu-title">恢复示例数据</text>
+      <text class="menu-sub">会覆盖这台手机上的错题</text>
+    </view>
+  </view>
+
+  <view class="menu" hover-class="pressed" bindtap="clearAll">
+    <view>
+      <text class="menu-title">清空错题</text>
+      <text class="menu-sub">只清这台手机</text>
+    </view>
+  </view>
+
+  <view class="menu" hover-class="pressed" bindtap="about">
+    <view>
+      <text class="menu-title">关于小错本</text>
+      <text class="menu-sub">识别和支付都还是占位</text>
+    </view>
+  </view>
+</view>
