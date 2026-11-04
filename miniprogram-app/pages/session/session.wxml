@@ -1,0 +1,63 @@
+<view class="page">
+  <view wx:if="{{missing}}" class="empty">
+    <text class="empty-title">没有这次要看的题</text>
+    <text class="muted">先回主页，或去练习里选题。</text>
+    <view class="btn" hover-class="pressed" bindtap="goBack">回去</view>
+  </view>
+
+  <view wx:elif="{{finished}}" class="empty">
+    <text class="empty-title">这轮看完了</text>
+    <text class="muted">{{wordKnow}} {{knowCount}} 道 · {{wordDont}} {{dontCount}} 道 · 已掌握 {{masterCount}} 道</text>
+    <view class="btn" hover-class="pressed" bindtap="goBack">{{backLabel}}</view>
+  </view>
+
+  <block wx:elif="{{card}}">
+    <text class="muted">{{posText}}</text>
+    <text class="muted" wx:if="{{review}}">记得就隔得更久：1、2、4、7、15 天。忘记回到 1 天。</text>
+    <view class="panel">
+      <view class="tags">
+        <text class="tag">{{card.subject}}</text>
+        <text class="tag" wx:if="{{card.qkind}}">{{card.qkind}}</text>
+      </view>
+      <text class="stem">{{card.stem}}</text>
+      <view
+        class="opt {{item.on ? 'on' : ''}}"
+        wx:for="{{card.options}}"
+        wx:for-item="item"
+        wx:key="letter"
+        data-letter="{{item.letter}}"
+        hover-class="pressed"
+        bindtap="pickOption"
+      >
+        <text class="opt-letter">{{item.letter}}</text>
+        <text>{{item.text}}</text>
+      </view>
+      <text class="sec-link" bindtap="reveal">{{revealed ? "收起记下的答案" : "看我记下的答案"}}</text>
+      <view wx:if="{{revealed}}" class="answer-box">{{card.answerText}}</view>
+      <text wx:if="{{revealed && card.note}}" class="muted hint">备注：{{card.note}}</text>
+    </view>
+
+    <view wx:if="{{!showNext}}">
+      <block wx:if="{{review}}">
+        <view class="btn" hover-class="pressed" bindtap="remember">还记得</view>
+        <view class="btn apricot" hover-class="pressed" bindtap="forgot">忘记了</view>
+        <view class="btn ghost" hover-class="pressed" bindtap="markMaster">标记已掌握</view>
+      </block>
+      <block wx:elif="{{card.hasLetter}}">
+        <text class="muted hint">点一个选项，对着你记下的答案看。不会生成解析。</text>
+        <view class="btn ghost" hover-class="pressed" bindtap="dont">不确定</view>
+      </block>
+      <block wx:else>
+        <text class="muted hint">没有用来自动对照的选项。点「我会了」算做对，连续三次就标记已经会了；点「不会」会把连续次数清零。</text>
+        <view class="row-btns">
+          <view class="btn gap" hover-class="pressed" bindtap="know">我会了</view>
+          <view class="btn ghost" hover-class="pressed" bindtap="dont">不会</view>
+        </view>
+      </block>
+    </view>
+    <view wx:else>
+      <view class="feedback">{{feedback}}</view>
+      <view class="btn" hover-class="pressed" bindtap="next">{{last ? "看结果" : "下一题"}}</view>
+    </view>
+  </block>
+</view>

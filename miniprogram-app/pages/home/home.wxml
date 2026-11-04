@@ -1,0 +1,114 @@
+<view class="page">
+  <view class="top">
+    <view>
+      <text class="greet">{{greet}}</text>
+      <text class="brand">小错本</text>
+    </view>
+    <view class="avatar" hover-class="pressed" bindtap="goMe">{{initial}}</view>
+  </view>
+
+  <view class="hero">
+    <text class="kicker">掌握率</text>
+    <text class="hero-num">{{rate}}%</text>
+    <text class="muted">{{heroSub}}</text>
+    <view class="track"><view class="track-fill" style="width: {{rate}}%;"></view></view>
+  </view>
+
+  <view class="stat3">
+    <view class="stat" hover-class="pressed" bindtap="startAll">
+      <text class="stat-num">{{dueCount}}</text>
+      <text class="stat-label">待复习</text>
+    </view>
+    <view class="stat" hover-class="pressed" bindtap="goBankMastered">
+      <text class="stat-num">{{mastered}}</text>
+      <text class="stat-label">已掌握</text>
+    </view>
+    <view class="stat" hover-class="pressed" bindtap="goStats">
+      <text class="stat-num">{{weekNew}}</text>
+      <text class="stat-label">本周新增</text>
+    </view>
+  </view>
+
+  <view class="photo" hover-class="pressed" bindtap="goCapture">
+    <view class="photo-mark"></view>
+    <view>
+      <text class="photo-title">拍照录错题</text>
+      <text class="photo-sub">框住一道题，读出来再改</text>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-head">
+      <text class="sec-title">今日复习</text>
+      <text class="sec-link" bindtap="startAll">全部开始</text>
+    </view>
+    <block wx:if="{{dueRows.length}}">
+      <view class="row" hover-class="pressed" wx:for="{{dueRows}}" wx:key="id" data-id="{{item.id}}" bindtap="startOne">
+        <view class="dot tone-{{item.tone}}"></view>
+        <view class="row-copy">
+          <text class="row-sub">{{item.subject}}</text>
+          <text class="row-stem">{{item.stem}}</text>
+        </view>
+        <text class="pill-go">复习</text>
+      </view>
+    </block>
+    <view wx:else class="empty">
+      <text class="empty-title">{{dueEmptyTitle}}</text>
+      <text class="muted">{{dueEmptyText}}</text>
+    </view>
+  </view>
+
+  <view class="sec">
+    <view class="sec-head">
+      <text class="sec-title">最近错题</text>
+      <text class="sec-link" bindtap="goBank">全部</text>
+    </view>
+    <view wx:if="{{recentEmpty}}" class="empty">
+      <text class="empty-title">错题库还是空的</text>
+      <text class="muted">最近记下的题会列在这里。</text>
+    </view>
+    <block wx:else>
+      <view class="row" hover-class="pressed" wx:for="{{recentRows}}" wx:key="id" data-id="{{item.id}}" bindtap="goQuestion">
+        <view class="dot tone-{{item.tone}}"></view>
+        <view class="row-copy">
+          <text class="row-sub">{{item.subject}} · {{item.dueLabel}}</text>
+          <text class="row-stem">{{item.stem}}</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <view class="sec">
+    <view class="sec-head"><text class="sec-title">去看看</text></view>
+    <view class="grid">
+      <view class="tile" hover-class="pressed" bindtap="goPractice">
+        <view class="tile-ic mint"></view>
+        <view>
+          <text class="tile-title">练习</text>
+          <text class="tile-sub">自己选题量</text>
+        </view>
+      </view>
+      <view class="tile" hover-class="pressed" bindtap="goBank">
+        <view class="tile-ic sky"></view>
+        <view>
+          <text class="tile-title">错题库</text>
+          <text class="tile-sub">按学科翻一遍</text>
+        </view>
+      </view>
+      <view class="tile" hover-class="pressed" bindtap="startAll">
+        <view class="tile-ic mint"></view>
+        <view>
+          <text class="tile-title">今日复习</text>
+          <text class="tile-sub">1 / 2 / 4 / 7 / 15 天</text>
+        </view>
+      </view>
+      <view class="tile" hover-class="pressed" bindtap="goStats">
+        <view class="tile-ic sky"></view>
+        <view>
+          <text class="tile-title">统计</text>
+          <text class="tile-sub">看看记下了多少</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

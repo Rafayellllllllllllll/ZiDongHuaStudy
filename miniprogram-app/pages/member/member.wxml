@@ -1,0 +1,8 @@
+<view class="page">
+  <text class="h1">永久会员</text>
+  <view class="panel">
+    <text class="stem">整理错题、排复习，现在都能用。</text>
+    <text class="muted hint">以后如果要解锁更多容量或云同步，打算做 9.9 元永久会员，用小程序虚拟支付。这一版还没有支付，点下面不会扣款。</text>
+  </view>
+  <view class="btn off" hover-class="pressed" bindtap="later">暂未开通</view>
+</view>
