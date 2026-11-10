@@ -38,3 +38,13 @@
 ## 配置
 
 `config.js` 里是 Supabase 地址和 anon key，以及管理员账号。不要把 service_role key 写进前端。页面上不会显示管理员账号名。
+
+## 安卓安装包
+
+手机浏览器打开下面这个地址，下载 `xiaocuoben.apk`，允许安装未知来源后安装。不需要电脑，也不上应用商店。支持 Android 8 及以上。
+
+https://github.com/Rafayellllllllllllll/ZiDongHuaStudy/releases/latest/download/xiaocuoben.apk
+
+登录方式和网站一样：账号加密码。会话存在应用里，退出之前不用重填。拍照会向系统要相机和相册权限。
+
+打包用 Capacitor。签名密钥不在仓库里，放在 GitHub Actions 的 secrets：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。推到 `main` 后，Actions 会打签名包并更新上面的下载地址。

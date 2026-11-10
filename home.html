@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="小错本">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fdf8f0">
+<meta name="theme-color" content="#f6fbf8">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>小错本 · 主页</title>
@@ -14,12 +14,14 @@
 <script src="supabase-js.js" defer onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'"></script>
 <script src="config.js" defer></script><script src="app.js" defer></script>
 </head><body>
-<header class="home-head"><div class="home-head-inner"><div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5h8.5A2 2 0 0 1 17.5 5.5V20l-2.7-1.4L12 20l-2.8-1.4L6.5 20V5.5A2 2 0 0 1 8.5 3.5H7z"/><path d="M9 8.5h5M9 12h5"/></svg></span><div><p class="greet" id="greet">你好</p><div class="logo">小错本</div></div></div><a id="avatar" class="avatar" href="index.html?account=1" aria-label="我的">我</a></div></header>
+<header class="home-head"><div class="home-head-inner"><div class="brand"><div><p class="greet" id="greet">你好</p><div class="logo">小错本</div></div></div><a id="avatar" class="avatar" href="index.html?account=1" aria-label="我的">我</a></div></header>
 <main class="dash">
 <div class="dash-grid">
   <section class="hero-card area-hero" id="heroCard">
-    <svg class="ring" viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/></svg>
-    <div class="hero-copy"><p class="kicker">掌握率</p><p class="hero-num" id="rateNum">0%</p><p class="small" id="heroSub">正在整理今天的进度…</p></div>
+    <p class="kicker">掌握率</p>
+    <p class="hero-num" id="rateNum">0%</p>
+    <p class="small" id="heroSub">正在整理今天的进度…</p>
+    <div class="track" aria-hidden="true"><div class="track-fill" id="trackFill"></div></div>
   </section>
   <div class="stat3 area-stats" id="stat3"></div>
   <a class="btn big-photo area-cta" href="upload.html"><span class="big-photo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg></span><span class="big-photo-tx">拍照录错题<small>框住一道题，读出来再改</small></span></a>
@@ -65,10 +67,11 @@ document.addEventListener("DOMContentLoaded", function () {
     try { sessionStorage.setItem("pwq_practice_ids", JSON.stringify(ids.slice(0, 10))); } catch(e) {}
     location.href = "practice-run.html";
   }
-  function row(q){
+  function row(q, withGo){
     const tone = PWQ.subjectTone(q.subject || "其他");
-    const stem = PWQ.escapeHtml((q.stem || "（无题干）").replace(/\s+/g, " ").slice(0, 42));
-    return "<button type='button' class='due-row' data-id='" + PWQ.escapeHtml(q.id) + "'><i class='subj-dot tone-" + tone + "'></i><span><b>" + PWQ.escapeHtml(q.subject || "其他") + "</b>" + stem + "</span><em>练</em></button>";
+    const stem = PWQ.escapeHtml((q.stem || "（无题干）").replace(/\s+/g, " ").slice(0, 48));
+    const go = withGo ? "<em>复习</em>" : "";
+    return "<button type='button' class='due-row' data-id='" + PWQ.escapeHtml(q.id) + "'><i class='subj-dot tone-" + tone + "'></i><span><b>" + PWQ.escapeHtml(q.subject || "其他") + "</b>" + stem + "</span>" + go + "</button>";
   }
   function paint(){
     const qs = PWQ.getQuestions();
@@ -78,11 +81,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const due = qs.filter(q => !q.mastered);
     const weekNew = qs.filter(q => q.created_at && PWQ.dateInShanghai(q.created_at) >= weekStart).length;
     const rate = qs.length ? Math.round(mastered.length / qs.length * 100) : 0;
-    const C = 2 * Math.PI * 52;
-    const ring = document.getElementById("ringFg");
-    ring.style.strokeDasharray = String(C);
-    ring.style.strokeDashoffset = String(C);
-    requestAnimationFrame(() => { ring.style.strokeDashoffset = String(C * (1 - rate / 100)); });
+    const fill = document.getElementById("trackFill");
+    fill.style.width = "0%";
+    requestAnimationFrame(() => { fill.style.width = rate + "%"; });
     document.getElementById("rateNum").textContent = rate + "%";
     document.getElementById("heroSub").textContent = qs.length
       ? ("已掌握 " + mastered.length + " / " + qs.length + " 题")
@@ -98,10 +99,10 @@ document.addEventListener("DOMContentLoaded", function () {
       recentEl.innerHTML = "<div class='empty-panel'><strong>错题库还是空的</strong><p>最近记下的题会列在这里。</p></div>";
     } else if (!due.length) {
       dueEl.innerHTML = "<div class='empty-panel'><strong>待复习的题都清完了</strong><p>已掌握的题还在错题库里，可以过几天再查。</p></div>";
-      recentEl.innerHTML = qs.slice(0, 3).map(row).join("");
+      recentEl.innerHTML = qs.slice(0, 3).map(q => row(q, false)).join("");
     } else {
-      dueEl.innerHTML = due.slice(0, 4).map(row).join("");
-      recentEl.innerHTML = qs.slice(0, 3).map(row).join("");
+      dueEl.innerHTML = due.slice(0, 4).map(q => row(q, true)).join("");
+      recentEl.innerHTML = qs.slice(0, 3).map(q => row(q, false)).join("");
     }
     const goDue = document.getElementById("goDue");
     if (goDue) goDue.onclick = () => startIds(due.map(q => q.id));

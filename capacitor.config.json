@@ -1,0 +1,20 @@
+{
+  "appId": "app.cuotiben.xiaocuoben",
+  "appName": "小错本",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "backgroundColor": "#f6fbf8"
+    }
+  }
+}

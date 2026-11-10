@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="小错本">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fdf8f0">
+<meta name="theme-color" content="#f6fbf8">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>小错本 · 录错题</title>
@@ -56,17 +56,26 @@ const tip = document.getElementById("camTip");
 const camScreen = document.getElementById("camScreen");
 async function startCamera(){
   camScreen.style.display = "flex";
+  if (PWQ.ensureNativePermissions) { try { await PWQ.ensureNativePermissions(); } catch (e0) {} }
   try {
     if (camStream) camStream.getTracks().forEach(t => t.stop());
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no-getUserMedia");
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
     video.srcObject = camStream;
     video.style.display = "block";
-    tip.textContent = "对着题目，点中间粉色按钮拍照，右下角相册可以选已有照片";
+    tip.textContent = "对着题目，点中间绿色按钮拍照，右下角相册可以选已有照片";
   } catch(e) {
-    tip.textContent = "相机打不开：请允许相机权限，或点下面“打不开相机？用系统相机拍照”，也可以直接点右下角相册";
-    try { PWQ.toast("相机打不开：请允许相机权限，或点右下角相册选已有照片"); } catch(e) {}
+    tip.textContent = "预览打不开。点中间按钮用系统相机拍照，或点右下角相册选已有照片。";
+    try { PWQ.toast("预览打不开，点中间按钮拍照，或点右下角相册"); } catch(e2) {}
     video.style.display = "none";
   }
+}
+async function captureFromSystem(source){
+  if (PWQ.takeNativePhoto) {
+    const nativeFile = await PWQ.takeNativePhoto(source);
+    if (nativeFile) return nativeFile;
+  }
+  return null;
 }
 function stopCamera(){
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
@@ -322,9 +331,28 @@ document.getElementById("delPageBtn").onclick = () => {
   showMultiPage(Math.min(currentPageIndex, photoPages.length - 1));
 };
 updateCamUI();
-document.getElementById("shootBtn").onclick = showImageFromCanvas;
-document.getElementById("camera").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (multiMode) addPage(f); else showImage(f); });
-document.getElementById("file").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (multiMode) addPage(f); else showImage(f); });
+document.getElementById("shootBtn").onclick = async () => {
+  if (camStream && video.videoWidth) { showImageFromCanvas(); return; }
+  const file = await captureFromSystem("camera");
+  if (file) { if (multiMode) addPage(file); else showImage(file); return; }
+  document.getElementById("camera").click();
+};
+document.getElementById("camera").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (multiMode) addPage(f); else showImage(f); e.target.value = ""; });
+document.getElementById("file").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (multiMode) addPage(f); else showImage(f); e.target.value = ""; });
+let albumBusy = false;
+document.querySelector(".album-btn").addEventListener("click", async (e) => {
+  if (!PWQ.isNativeApp || !PWQ.isNativeApp()) return;
+  if (albumBusy) return;
+  e.preventDefault();
+  albumBusy = true;
+  try {
+    const file = await captureFromSystem("photos");
+    if (file) { if (multiMode) addPage(file); else showImage(file); return; }
+    document.getElementById("file").click();
+  } finally {
+    albumBusy = false;
+  }
+});
 document.getElementById("addBox").onclick = () => {
   boxes.push({x:5, y:10 + boxes.length*8, w:90, h:20, selected:false, selOrder:0, label:"手动框 " + (boxes.length+1)});
   renderBoxes();
