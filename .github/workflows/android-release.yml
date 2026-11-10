@@ -1,0 +1,88 @@
+name: Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - cursor/android-apk-372d
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install and sync the web app into the Android project
+        run: |
+          npm ci
+          npm run sync:android
+
+      - name: Decode the release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "has_keystore=false" >> "$GITHUB_ENV"
+            echo "Release keystore secret is not set. Building a debug-signed APK instead."
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/xiaocuoben-release.jks"
+          echo "has_keystore=true" >> "$GITHUB_ENV"
+
+      - name: Write signing properties
+        if: env.has_keystore == 'true'
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          umask 077
+          cat > android/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/xiaocuoben-release.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Build the signed release APK
+        if: env.has_keystore == 'true'
+        working-directory: android
+        run: chmod +x ./gradlew && ./gradlew assembleRelease --no-daemon
+
+      - name: Build a debug-signed APK when the release keystore is missing
+        if: env.has_keystore != 'true'
+        working-directory: android
+        run: chmod +x ./gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Publish the APK on the Android release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk xiaocuoben.apk
+            KIND="release"
+          else
+            cp android/app/build/outputs/apk/debug/app-debug.apk xiaocuoben.apk
+            KIND="debug"
+          fi
+          NOTES="小错本 Android 安装包（${KIND}）。用手机浏览器打开这个地址下载，允许安装未知来源后安装。支持 Android 8 及以上。"
+          if gh release view xiaocuoben-android >/dev/null 2>&1; then
+            gh release upload xiaocuoben-android xiaocuoben.apk --clobber
+            gh release edit xiaocuoben-android --title "小错本 Android" --notes "$NOTES" --latest
+          else
+            gh release create xiaocuoben-android xiaocuoben.apk --title "小错本 Android" --notes "$NOTES" --latest
+          fi

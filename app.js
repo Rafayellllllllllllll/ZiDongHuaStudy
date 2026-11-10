@@ -13,10 +13,67 @@
 const cfg = window.APP_CONFIG || {};
 const configured = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && !cfg.SUPABASE_URL.includes("YOUR_") && !String(cfg.SUPABASE_ANON_KEY).includes("YOUR_"));
 window.SKELETON = { configured };
+function isNativeApp(){
+  try { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }
+  catch (e) { return false; }
+}
+function nativeCall(plugin, method, options){
+  const cap = window.Capacitor;
+  if (!cap || typeof cap.nativePromise !== "function") return Promise.reject(new Error("no-bridge"));
+  return cap.nativePromise(plugin, method, options || {});
+}
 if (configured && window.supabase) {
-  window.supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  // 账号密码登录，会话放在 WebView 的 localStorage 里，不走浏览器跳转。
+  // Android WebView 的 navigator.locks 会把刷新会话卡住，应用里改成当场执行。
+  const auth = {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: "pkce",
+    storage: window.localStorage
+  };
+  if (isNativeApp()) auth.lock = function (_name, _timeout, fn) { return Promise.resolve(fn()); };
+  window.supabaseClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, { auth: auth });
 } else {
   window.supabaseClient = null;
+}
+async function ensureNativePermissions(){
+  if (!isNativeApp()) return;
+  try { await nativeCall("Camera", "requestPermissions", { permissions: ["camera", "photos"] }); }
+  catch (e) { /* 系统相机和相册仍可用 */ }
+}
+function dataUrlToFile(dataUrl){
+  const parts = String(dataUrl || "").split(",");
+  if (parts.length < 2) return null;
+  const mime = (parts[0].match(/data:(.*?);/) || [])[1] || "image/jpeg";
+  const bin = atob(parts[1]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new File([bytes], "photo.jpg", { type: mime });
+}
+async function takeNativePhoto(source){
+  if (!isNativeApp()) return null;
+  await ensureNativePermissions();
+  let res;
+  try {
+    res = await nativeCall("Camera", "getPhoto", {
+      quality: 85,
+      allowEditing: false,
+      resultType: "dataUrl",
+      source: source === "photos" ? "PHOTOS" : "CAMERA",
+      correctOrientation: true,
+      saveToGallery: false,
+      width: 1600
+    });
+  } catch (e) {
+    const msg = String(e && (e.message || e.errorMessage) || e || "");
+    if (/cancel/i.test(msg)) return null;
+    return null;
+  }
+  if (!res) return null;
+  if (res.dataUrl) return dataUrlToFile(res.dataUrl);
+  if (res.base64String) return dataUrlToFile("data:image/jpeg;base64," + res.base64String);
+  return null;
 }
 function banner(){
   if (!configured) {
@@ -945,13 +1002,42 @@ function mountTabs(){
 }
 
 window.PWQ = { cfg, configured, banner, store, save, currentUser, isAdmin, subjectTone,
+  isNativeApp, ensureNativePermissions, takeNativePhoto,
   toast, escapeHtml, cleanLatex, getQuestions, getCachedQuestions, saveQuestions, explainPlaceholder,
   ready, signInOrUp, signOut, signOutAll, addQuestion, updateQuestion, deleteQuestion,
   getKnowledgePoints, saveKnowledgePoints, kpId, isKnowledgeFavorited, toggleKnowledgePoint, linkKnowledgeToQuestion, extractKnowledgePoints, recordTokenUsage,
   getNotes, addNote, updateNote, deleteNote, loadProfile, saveFullNote,
   uploadNoteImage, signedUrlForNoteImage, prepareNoteHtml,
   dateInShanghai, todayShanghai, formatOption, optionLetter, answerLetter };
-document.addEventListener("DOMContentLoaded", function () { banner(); mountTabs(); });
+document.addEventListener("DOMContentLoaded", function () {
+  banner();
+  mountTabs();
+  ensureNativePermissions();
+  // 邮件确认或找回密码如果带回 xiaocuoben://auth#... ，把片段交给 Supabase。
+  if (!isNativeApp() || !window.supabaseClient) return;
+  const cap = window.Capacitor;
+  const deliver = (url) => {
+    if (!url || url.indexOf("access_token") < 0 && url.indexOf("code=") < 0 && url.indexOf("error=") < 0) return;
+    const hash = url.indexOf("#") >= 0 ? url.slice(url.indexOf("#")) : "";
+    const query = url.indexOf("?") >= 0 ? url.slice(url.indexOf("?")) : "";
+    const next = "index.html" + (query || "") + (hash || "");
+    if (location.pathname.indexOf("index.html") >= 0 || location.pathname.endsWith("/")) {
+      if (hash && location.hash !== hash) location.hash = hash;
+    } else {
+      location.href = next;
+    }
+  };
+  try {
+    if (typeof cap.nativeCallback === "function") {
+      cap.nativeCallback("App", "addListener", { eventName: "appUrlOpen" }, function (event) {
+        deliver(event && event.url);
+      });
+    }
+    nativeCall("App", "getLaunchUrl", {}).then(function (res) {
+      if (res && res.url) deliver(res.url);
+    }).catch(function () {});
+  } catch (e) {}
+});
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function(){
     var swUrl = "sw.js";

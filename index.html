@@ -5,7 +5,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="小错本">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fdf8f0">
+<meta name="theme-color" content="#f6fbf8">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>小错本 · 登录</title>
@@ -29,7 +29,7 @@
 </form>
 <p class="small">账号不存在时点「注册 / 登录」就是注册，账号已存在时就是登录。密码错了会提示，不会覆盖原来的账号。</p>
 </div>
-<div class="card mint"><h2>登录后可以去</h2>
+<div class="card mint" id="afterLogin"><h2>登录后可以去</h2>
 <p><a class="btn" href="upload.html">去录错题</a><a class="btn secondary" href="bank.html">去错题库</a><a class="btn ghost" href="practice.html">去练习</a></p>
 <p class="small">主人账号登录后，可以在「我的」里进管理页，看谁登录过。看不到别人的错题。</p></div>
 </main>
@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (uu && isMy0) {
       document.getElementById("loadingCard").classList.add("hidden");
       document.getElementById("loginCard").classList.add("hidden");
+      document.getElementById("afterLogin").classList.add("hidden");
       const myCard2 = document.getElementById("myCard");
       if (myCard2.classList.contains("hidden")) {
         myCard2.classList.remove("hidden");
@@ -71,6 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (u && isMy) {
     // 我的页面：从上往下依次是头像、名字、邮箱、退出登录，登录表单和注册说明全部藏起来
     document.getElementById("loginCard").classList.add("hidden");
+    document.getElementById("afterLogin").classList.add("hidden");
     const myCard = document.getElementById("myCard");
     myCard.classList.remove("hidden");
     const av = document.getElementById("myAvatar");
